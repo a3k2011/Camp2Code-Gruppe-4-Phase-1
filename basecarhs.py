@@ -3,7 +3,7 @@ import time
 
 class BaseCar:
     def __init__(self):
-        self._steering_angle = 0
+        self._steering_angle = 90
         self._speed = 0
         self._direction = 1
         self.fw = basisklassen.Front_Wheels()
@@ -16,7 +16,6 @@ class BaseCar:
     @speed.setter
     def speed(self, value):
         self._speed = value
-
 
     @property
     def direction(self):
@@ -37,6 +36,7 @@ class BaseCar:
     
     def drive(self, geschwindigkeit, richtung):
         self.bw.speed = geschwindigkeit
+        self._direction = richtung
         if richtung > 0:
             self.bw.forward()
         elif richtung < 0:
@@ -46,10 +46,3 @@ class BaseCar:
         
     def stop(self):
         self.bw.stop()
-        
-#Main
-
-car1 = BaseCar()
-car1.drive(50, 1)
-time.sleep(1)
-car1.stop()
