@@ -12,8 +12,8 @@ class BaseCar(object):
         self.direction = 1
 
     def drive(self, v, dir):
-        self.direction = dir
         self.speed = v
+        self.direction = dir
 
     def stop(self):
         self._bw.stop()
@@ -41,9 +41,9 @@ class BaseCar(object):
 
     @direction.setter
     def direction(self, dir):
-        self._direction = -1 if dir==-1 else 1
-        self._bw.backward() if dir==-1 else self._bw.forward()
-        # self._bw.foward()
-        # self._bw.backward()
-        # self._direction = self._bw.backward() if dir==-1 else self._bw.forward()
+        self._direction = -1 if dir==-1 else 0 if dir==0 else 1
+        self.stop() if dir==0 else self._bw.backward() if dir==-1 else self._bw.forward()
+        #self._bw.backward() if dir==-1 else self._bw.forward()
+
+    
 
