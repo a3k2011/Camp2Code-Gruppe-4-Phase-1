@@ -52,8 +52,9 @@ class BaseCar:
         self.fw.turn(self._steering_angle)
     
     def drive(self, geschwindigkeit, richtung):
-        self._speed = geschwindigkeit
-        self._direction = richtung
+        self.speed = geschwindigkeit
+        self.bw.speed = self.speed
+        self.direction = richtung
         if richtung > 0:
             self.bw.forward()
         elif richtung < 0:
