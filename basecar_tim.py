@@ -1,15 +1,23 @@
+from pandas import read_json
 import basisklassen as bk
-
+import json
 
 class BaseCar(object):
 
 
     def __init__(self):
-        self._fw = bk.Front_Wheels()
-        self._bw = bk.Back_Wheels()
+        self._json = self.readJSON()
+        self._fw = bk.Front_Wheels(turning_offset=self._json["turning_offset"])
+        self._bw = bk.Back_Wheels(forward_A=self._json["forward_A"], forward_B=self._json["forward_B"])
         # self.speed = 0
         self.steering_angle = 90
         self.direction = 1
+
+    @staticmethod 
+    def readJSON():
+        with open("config.json", "r") as f:
+            data = json.load(f)
+        return data
 
     def drive(self, v, dir):
         self.speed = v

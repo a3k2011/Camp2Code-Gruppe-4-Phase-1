@@ -49,3 +49,8 @@ def fahrparcour2(bc, v=50, listSA=None):
 
         # Ende
         bc.stop()
+
+def fahrparcour3(sc, v=50):
+    
+    # Vorwaerts bis Hindernis
+    sc.drive(v, 1)

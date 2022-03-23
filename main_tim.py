@@ -1,4 +1,6 @@
+from cgi import test
 import basecar_tim as BC
+import soniccar_tim as SC
 import fahrparcour_tim as fp
 import time
 
@@ -46,6 +48,7 @@ def main():
 
     # BaseCar erstellen
     bc = BC.BaseCar()
+    sc = SC.SonicCar()
 
     # Test Manuell
     #bc.speed = 30
@@ -67,18 +70,34 @@ def main():
 
     # Test Speed
     #testeSpeed(bc)
+    #testeSpeed(sc)
 
     # Test Steering Angle
     #testeSteeringAngle(bc)
+    #testeSteeringAngle(sc)
 
     # Test Direction
     #testeDirection(bc)
+    #testeDirection(sc)
 
     # Test Fahrparcour1
     #fp.fahrparcour1(bc, 50)
+    #fp.fahrparcour1(sc, 50)
 
     # Test Fahrparcour2
     #fp.fahrparcour2(bc, 50)
+    #fp.fahrparcour2(sc, 50)
+
+    # Test Distanz
+    #for i in range(5):
+    #    print("Aktueller Abstand zum Hindernis:", sc.getDistance())
+    #    time.sleep(1)
+
+    # Test Fahrparcour3
+    fp.fahrparcour3(sc, 80)
+
+    # Test Fahrparcour4
+    #fp.fahrparcour4(sc, 50)
 
 
 if __name__ == '__main__':
