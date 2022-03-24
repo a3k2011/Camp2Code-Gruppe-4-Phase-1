@@ -64,3 +64,23 @@ class BaseCar:
         
     def stop(self):
         self.bw.stop()
+
+class Sonic(BaseCar):
+    def __init__(self):
+        super().__init__()
+        self.us = basisklassen.Ultrasonic()
+    
+    @property
+    def distance(self):
+        return self.us.distance()
+
+    @property
+    def drive_data(self):
+        self.distance = self.us.distance()
+        return (self.speed,
+                self.direction,
+                self.steering_angle,
+                self.distance)
+    
+    def usstop(self):
+        self.us.stop()
