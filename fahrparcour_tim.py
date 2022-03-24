@@ -1,11 +1,8 @@
 '''
-    Diese Datei enthaelt die Fahrparcours.
+    Diese Datei enthaelt die Fahrparcours 1 und 2.
 '''
 import time
-import datenlogger as DL
-from cmath import log
-from datetime import datetime
-import os, json
+
 
 def fahrparcour1(bc, v=50):
 
@@ -52,29 +49,3 @@ def fahrparcour2(bc, v=50, listSA=None):
 
         # Ende
         bc.stop()
-
-def fahrparcour3(sc, v=50):
-    
-    # Vorwaerts bis Hindernis
-    sc.drive(v, 1)
-
-def fahrparcour4(sc, v=50):
-
-    dl = DL.Datenlogger(log_file_path="Logger")
-    dl.start()
-    # Erkundungstour X Runden
-    for i in range(1):
-
-        sc.drive(v, 1)
-
-        while (sc.distance - sc.US_OFFSET) > 0:
-            dl.append(sc.getFahrdaten())
-            time.sleep(0.1)
-        
-        sc.stop()
-
-        sc.rangieren()
-
-    sc.stop()
-
-    dl.save()

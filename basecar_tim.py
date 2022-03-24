@@ -1,6 +1,8 @@
-from pandas import read_json
 import basisklassen as bk
+import datenlogger  as dl
 import json
+from pandas import read_json
+
 
 class BaseCar(object):
 
@@ -9,6 +11,7 @@ class BaseCar(object):
         self._json = self.readJSON()
         self._fw = bk.Front_Wheels(turning_offset=self._json["turning_offset"])
         self._bw = bk.Back_Wheels(forward_A=self._json["forward_A"], forward_B=self._json["forward_B"])
+        self._dl = dl.Datenlogger("Logger")
         # self.speed = 0
         self.steering_angle = 90
         self.direction = 1
