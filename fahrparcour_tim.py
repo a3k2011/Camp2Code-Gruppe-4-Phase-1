@@ -60,7 +60,7 @@ def fahrparcour3(sc, v=50):
 
 def fahrparcour4(sc, v=50):
 
-    dl = DL.Datenlogger(log_file_path="TestLogs")
+    dl = DL.Datenlogger(log_file_path="Logger")
     dl.start()
     # Erkundungstour X Runden
     for i in range(1):
@@ -77,9 +77,4 @@ def fahrparcour4(sc, v=50):
 
     sc.stop()
 
-    print(dl._log_data)
-
-    print(dl._log_file_path)
-
-    print("Ende")
     dl.save()
