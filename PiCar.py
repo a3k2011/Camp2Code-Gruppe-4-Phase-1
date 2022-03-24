@@ -76,7 +76,6 @@ class Sonic(BaseCar):
 
     @property
     def drive_data(self):
-        self.distance = self.us.distance()
         return (self.speed,
                 self.direction,
                 self.steering_angle,
