@@ -1,4 +1,3 @@
-from cgi import test
 import basecar_tim as BC
 import soniccar_tim as SC
 import fahrparcour_tim as fp
@@ -94,10 +93,37 @@ def main():
     #    time.sleep(1)
 
     # Test Fahrparcour3
-    fp.fahrparcour3(sc, 80)
+    #fp.fahrparcour3(sc, 80)
 
     # Test Fahrparcour4
-    #fp.fahrparcour4(sc, 50)
+    fp.fahrparcour4(sc, 80)
+
+    # Teste Threads
+    #print("Start Programm")
+
+    #scThread = SC.SonicCar()
+
+    #timerTH = SC.TimerThread(scThread, 3)
+    #loggerTH = SC.LoggerThread(scThread, 100)
+    #usTH = SC.USThread(scThread, 0.1)
+
+    #print("v=50 / dir=1")
+    #sc.drive(50, 1)
+
+    #print("Timer start")
+    #timerTH.start()
+    #print("Logger start")
+    #loggerTH.start()
+    #print("US start")
+    #usTH.start()
+
+    #timerTH.join()
+    #loggerTH.stop()
+    #usTH.stop()
+
+    #sc.stop()
+
+    #print("Ende Programm")
 
 
 if __name__ == '__main__':

@@ -2,7 +2,10 @@
     Diese Datei enthaelt die Fahrparcours.
 '''
 import time
-
+import datenlogger as DL
+from cmath import log
+from datetime import datetime
+import os, json
 
 def fahrparcour1(bc, v=50):
 
@@ -54,3 +57,29 @@ def fahrparcour3(sc, v=50):
     
     # Vorwaerts bis Hindernis
     sc.drive(v, 1)
+
+def fahrparcour4(sc, v=50):
+
+    dl = DL.Datenlogger(log_file_path="TestLogs")
+    dl.start()
+    # Erkundungstour X Runden
+    for i in range(1):
+
+        sc.drive(v, 1)
+
+        while (sc.distance - sc.US_OFFSET) > 0:
+            dl.append(sc.getFahrdaten())
+            time.sleep(0.1)
+        
+        sc.stop()
+
+        sc.rangieren()
+
+    sc.stop()
+
+    print(dl._log_data)
+
+    print(dl._log_file_path)
+
+    print("Ende")
+    dl.save()

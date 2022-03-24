@@ -1,3 +1,4 @@
+import threading
 import time
 import os
 from datetime import datetime
@@ -12,41 +13,86 @@ class SonicCar(BCT.BaseCar):
     def __init__(self):
         super().__init__()
         self._us = Ultrasonic()
-        self._distance = 999
+        self._distance = None
+        self._logFilename = "CarLog-" + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    def drive(self, v, dir):
-        self.speed = v
-        self.direction = dir
+    def rangieren(self):
+        self.speed = 50
+        self.steering_angle = 45 
+        self.direction = -1
 
-        logFilename = "CarLog-" + datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cntTime = time.perf_counter()
+        while (time.perf_counter() - cntTime) < 2.55:
+            time.sleep(.1)
 
-        while ((self.distance if self._distance > 0 else 999) - SonicCar.US_OFFSET) > 0:
-            
-            self.writeLoggingFile(logFilename)
-            time.sleep(0.025)
+        self.steering_angle = 90
+        self.direction = 1
 
-        self.stop()
- 
     @property 
     def distance(self):
-        self._distance = self._us.distance()
+        dist = self._us.distance()
+        self._distance = dist if dist >= 0 else 999
         return self._distance
 
     def getFahrdaten(self):
         return (str(self.speed), str(self.steering_angle), str(self.direction), str(self._distance))
 
-    def writeLoggingFile(self, logFilename):
-        
-        path = os.path.join("Logger", logFilename)
-        logTS = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-4]
-        v, sa, dir, dist = self.getFahrdaten()
-        logContent = logTS + " - " + v + "% - " + sa + "° - " + dir + " - " + dist + "cm\n"
 
-        try:
-            with open(path, "a") as logs: 
-                logs.write(logContent)
-        except Exception:
-            print("Die Messung konnte nicht geloggt werden!")
+class TimerThread(threading.Thread):
+
+    def __init__(self, car, sec):
+        super().__init__()
+        self._car = car
+        self._sec = sec
+
+    def run(self):
+        for i in range(self._sec):
+            print("Time: ", i)
+            time.sleep(1)
+
+        self._car._us.stop()
+
+
+class LoggerThread(threading.Thread):
+
+    def __init__(self, car, sec):
+        super().__init__()
+        self._car = car
+        self._sec = sec
+        self._stop_event = threading.Event()
+
+    def run(self):
+        for i in range(self._sec):
+            print("Logger:", i)
+            time.sleep(0.1)
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
+
+
+class USThread(threading.Thread):
+
+    def __init__(self, car, freq):
+        super().__init__()
+        self._car = car
+        self._freq = freq
+        self._stop_event = threading.Event()
+
+    def run(self):
+        while (self._car.distance - self._car.US_OFFSET) > 0:
+            print("Abstand: ", self._car._distance)
+            time.sleep(self._freq)
+
+        self._car.stop()   
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()            
     
 
 
