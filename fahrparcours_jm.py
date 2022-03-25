@@ -1,4 +1,6 @@
 from curses.ascii import isdigit
+
+from pyparsing import java_style_comment
 import PiCar
 import time
 import sys
@@ -11,7 +13,6 @@ def driveCar(speed, direction, angle, duration):
     while i < (10 * duration):
         myCar.steering_angle = angle
         myCar.drive(speed, direction)
-        myCar.logger_log()
         time.sleep(0.1)
         i += 1
     myCar.stop()
@@ -21,6 +22,7 @@ def fahrparcour(pos):
     if pos == 1:
         print("Fahrparcours 1 gewaehlt:")
         print("3 Sekunden gerade vor")
+        
         driveCar(30, 1, 0, 3)
         print("eine Sekunde Pause")
         driveCar(0, 0, 0, 1)
@@ -51,7 +53,7 @@ def fahrparcour(pos):
         drive_time = 0
         distance = myCar.distance
         while (distance > 20 or distance < 5) and drive_time < max_time:
-            myCar.steering_angle = 5
+            myCar.steering_angle = 0
             myCar.drive(40, 1)
             time.sleep(0.1)
             distance = myCar.distance
@@ -76,9 +78,9 @@ def fahrparcour(pos):
                 drive_time += 1
             myCar.stop()
             print("zuruecksetzen")
-            myCar.steering_angle = 35
-            myCar.drive(30, -1)
-            time.sleep(1)
+            myCar.steering_angle = 45
+            myCar.drive(40, -1)
+            time.sleep(2)
             myCar.stop()
             myCar.steering_angle = 0
 
@@ -89,6 +91,17 @@ def fahrparcour(pos):
         print("gerade zuruecksetzen")
         driveCar(50, -1, 0, 2)
         myCar.stop()
+        print()
+
+    elif pos == 8:
+        print("Datenaufzeichnung IR Sensoren")
+        myCar.stop()
+        input("Taste für start")
+        i = 0
+        while i < 200:
+            myCar.drive_data
+            time.sleep(0.05)
+            i += 1
         print()
 
     else:
@@ -112,6 +125,7 @@ def main():
                 4 = Erkundungsfahrt
                 5 = aufgezeichnete Fahrt rueckwarts
                 7 = gerade zuruecksetzen
+                8 = Datenaufzeichnung IR Sensor
                 "x" = abbrechen
                 "q" = beenden 
                 Bitte waehlen: """

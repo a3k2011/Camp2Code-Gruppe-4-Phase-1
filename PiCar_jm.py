@@ -46,8 +46,8 @@ class BaseCar:
     def logger_start(self):
         self._dl.start()
 
-    def logger_log(self):
-        self._dl.append(self.drive_data)
+    def logger_log(self, data):
+        self._dl.append(data)
 
     def logger_save(self):
         self._dl.save()
@@ -66,6 +66,7 @@ class BaseCar:
             self.bw.backward()
         else:
             self.bw.stop()
+        self.drive_data
 
     def stop(self):
         """sofortiges anhalten des PiCar"""
@@ -112,6 +113,7 @@ class BaseCar:
             self._steering_angle = 90 + value
         self._steering_angle = self._steering_angle
         self.fw.turn(self._steering_angle)
+        self.drive_data
 
     @property
     def speed(self):
@@ -138,7 +140,9 @@ class BaseCar:
         Returns:
             tuple: speed, direction, steering_angle
         """
-        return [self._speed, self._direction, self._steering_angle]
+        data = [self._speed, self._direction, self._steering_angle]
+        self.logger_log(data)
+        return data
 
 
 class SonicCar(BaseCar):
@@ -170,7 +174,10 @@ class SonicCar(BaseCar):
         Returns:
             tuple: speed, direction, steering_angle, distance
         """
-        return [self._speed, self._direction, self._steering_angle, self.distance]
+        data = [self._speed, self._direction, self._steering_angle, self.distance]
+
+        self.logger_log(data)
+        return data
 
 
 class SensorCar(SonicCar):
@@ -202,13 +209,14 @@ class SensorCar(SonicCar):
         Returns:
             tuple: speed, direction, steering_angle, distance, ir_sensors
         """
-        return [
+        data = [
             self._speed,
             self._direction,
             self._steering_angle,
             self.distance,
-            self.ir_sensor_analog,
-        ]
+        ] + self.ir_sensor_analog
+        self.logger_log(data)
+        return data
 
 
 def main():
