@@ -5,6 +5,7 @@ from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 import basecar_tim as BCT
 from basisklassen import Ultrasonic
+import dashboard_tim as DSHB
 
 
 class SonicCar(BCT.BaseCar):
@@ -26,6 +27,7 @@ class SonicCar(BCT.BaseCar):
         self._active = False
         self._hindernis = False
         self._tmpspeed = None
+        #self._dash = DSHB.Dashboard()
 
     @property 
     def distance(self):
@@ -63,7 +65,7 @@ class SonicCar(BCT.BaseCar):
             try:
                 if inpUser in dictBefehle:
                     exec(dictBefehle[inpUser])
-                elif int(inpUser) and int(inpUser) >=0 and int(inpUser) <= 100:
+                elif type(int(inpUser)) and int(inpUser) >=0 and int(inpUser) <= 100:
                     self.speed = int(inpUser)
                     self._tmpspeed = int(inpUser)
                 else:
