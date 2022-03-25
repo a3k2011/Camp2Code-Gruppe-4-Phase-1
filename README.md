@@ -8,7 +8,7 @@
 * git status
 
 #### Auflistung aller durchgeführten push-Vorgänge
-* git status
+* git log
 
 #### Arbeitsverzeichnis auf den aktuellen Status bringen
 * git pull
