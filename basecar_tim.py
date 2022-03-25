@@ -1,5 +1,5 @@
 import basisklassen as bk
-import datenlogger  as dl
+import datenlogger_tim  as dl
 import json
 from pandas import read_json
 
