@@ -1,3 +1,4 @@
+import sys
 import time
 import basecar_tim as BC
 import soniccar_tim as SC
@@ -93,8 +94,19 @@ def main():
     #    time.sleep(1)
 
     # Teste erkundeWelt (Fahrparcour 4)
-    scWelt = SC.SonicCar()
-    scWelt.erkundeWelt(80, 10)
+    if len(sys.argv) >= 2:
+        scWelt = SC.SonicCar()
+        try:
+            for arg in sys.argv[1:]:
+                int(arg)
+            
+            if len(sys.argv) == 3:
+                scWelt.erkundeWelt(int(sys.argv[1]), int(sys.argv[2]))
+            else:
+                scWelt.erkundeWelt(int(sys.argv[1]))
+
+        except Exception:
+            print("Nur Zahlenwerte erlaubt!")
 
 
 if __name__ == '__main__':

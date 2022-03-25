@@ -9,7 +9,7 @@ from basisklassen import Ultrasonic
 
 class SonicCar(BCT.BaseCar):
 
-    US_OFFSET = 10
+    US_OFFSET = 15
     US_FREQ = 0.1
     LOG_FREQ = 0.1
     TIME_FREQ = 0.1
@@ -76,7 +76,7 @@ class SonicCar(BCT.BaseCar):
         self._active = True
         self._tmpspeed = v
 
-        # Init Threads
+        # Initialisiere Threads
         e = ThreadPoolExecutor(max_workers=4)
         if zeit == None:
             self._inpThread = e.submit(self.inputFunction)
@@ -86,15 +86,14 @@ class SonicCar(BCT.BaseCar):
         self._usThread = e.submit(self.usFunction)
         self._rangierThread = e.submit(self.rangieren)
         
-        # Start
+        # Starte die Fahrt
         if self._active:
             self.drive(v, 1)
-
-        while self._active:
-            time.sleep(0.1)
             
-        # Stop
+        # Wartet auf Fertigstellung aller Threads
         e.shutdown(wait=True)
+
+        # Stopt die Fahrt
         self.stop()   
         self._us.stop()
 
