@@ -48,7 +48,7 @@ def main():
 
     # Cars erstellen
     #bc = BC.BaseCar()
-    #sc = SC.SonicCar()
+    sc = SC.SonicCar()
 
     # Test Manuell
     #bc.speed = 30

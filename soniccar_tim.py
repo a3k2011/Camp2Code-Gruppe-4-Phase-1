@@ -5,7 +5,6 @@ from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 import basecar_tim as BCT
 from basisklassen import Ultrasonic
-import dashboard_tim as DSHB
 
 
 class SonicCar(BCT.BaseCar):
@@ -27,7 +26,6 @@ class SonicCar(BCT.BaseCar):
         self._active = False
         self._hindernis = False
         self._tmpspeed = None
-        #self._dash = DSHB.Dashboard()
 
     @property 
     def distance(self):
@@ -36,7 +34,7 @@ class SonicCar(BCT.BaseCar):
         return self._distance
 
     def getFahrdaten(self):
-        return (str(self.speed), str(self.steering_angle), str(self.direction), str(self._distance))
+        return {'v': self.speed, 'sa': self.steering_angle, 'dir': self.direction, 'dist': self._distance}
 
     def zeitFunction(self, zeit):
         cntTime = time.perf_counter()
