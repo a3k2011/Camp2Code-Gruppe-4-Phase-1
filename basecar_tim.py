@@ -44,7 +44,6 @@ class BaseCar(object):
     @steering_angle.setter
     def steering_angle(self, angle):
         self._steering_angle = self._fw.turn(angle)
-        # self._fw.turn(angle)
 
     @property
     def direction(self):
@@ -54,7 +53,6 @@ class BaseCar(object):
     def direction(self, dir):
         self._direction = -1 if dir==-1 else 0 if dir==0 else 1
         self.stop() if dir==0 else self._bw.backward() if dir==-1 else self._bw.forward()
-        #self._bw.backward() if dir==-1 else self._bw.forward()
 
     
 

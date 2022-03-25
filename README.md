@@ -23,6 +23,9 @@
 * cat /home/pi/.ssh/id_rsa.pub
 * SSH-Key in GitHub einfügen
 
+#### GIT-Config prüfen
+* git config --list
+
 ## .gitignore
 Ignoriert im Arbeitsverzeichnis die folgenden Datein bzw. Ordner:
 * \*.json
