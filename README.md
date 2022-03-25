@@ -27,8 +27,10 @@
 * git config --list
 
 ## .gitignore
-Ignoriert im Arbeitsverzeichnis die folgenden Datein bzw. Ordner:
+Ignoriert im Arbeitsverzeichnis die folgenden Dateien bzw. Ordner:
 * \*.json
 * /Logger
 * /\__pycache__
+
+## Nächstes Kapitel
 
