@@ -22,3 +22,10 @@
 * ssh-keygen -o (Beide Abfragen leer bestätigen.)
 * cat /home/pi/.ssh/id_rsa.pub
 * SSH-Key in GitHub einfügen
+
+## .gitignore
+Ignoriert im Arbeitsverzeichnis die folgenden Datein bzw. Ordner:
+* \*.json
+* /Logger
+* /\__pycache__
+
