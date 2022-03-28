@@ -1,9 +1,7 @@
-from cmath import log
-from datetime import datetime
 import os, json
 import pandas as pd
 import time
-
+from datetime import datetime
 
 class Datenlogger:
     """Datenlogger Klasse
@@ -34,7 +32,7 @@ class Datenlogger:
         Args:
             data (_type_): ein Element (Tuple, Liste, Dict) wird an den Logger uebergeben
         """
-        dataDF = pd.DataFrame(data, index=[(time.perf_counter()-self._cntTime)])
+        dataDF = pd.DataFrame(data, index=[round((time.perf_counter()-self._cntTime),2)])
         self._dataframe = pd.concat([self._dataframe, dataDF], verify_integrity=True)
 
     def save(self):

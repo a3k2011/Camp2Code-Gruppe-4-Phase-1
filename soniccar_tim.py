@@ -30,7 +30,7 @@ class SonicCar(BCT.BaseCar):
     @property 
     def distance(self):
         dist = self._us.distance()
-        self._distance = dist if dist >= 0 else 999
+        self._distance = dist if dist >= 0 else self.US_OFFSET+1
         return self._distance
 
     def getFahrdaten(self):
