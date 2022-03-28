@@ -3,13 +3,16 @@ import glob
 import json
 import pandas as pd
 from pandas import read_json
+import time
 import datetime
 import dash
 from dash import dcc
 from dash import html
 import plotly.express as px
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
+from dash import callback_context
 import dash_bootstrap_components as dbc
+import soniccar_tim as SC
 
 def getLoggerFiles():
     wcLoggerOrdner = os.path.join('Logger', '*')
@@ -35,7 +38,6 @@ def computeKPI(data):
 
 listLoggerFiles = getLoggerFiles()
 ddLabels = {'v': 'Geschwindigkeit', 'sa': 'Lenkwinkel', 'dir': 'Richtung', 'dist': 'Abstand', 'inf': 'Infrarot'}
-dfFahrattribut = pd.DataFrame()
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -72,7 +74,17 @@ app.layout = html.Div(
                      placeholder='Bitte Fahrattribut wählen!', style={'width': 500}),
         dcc.Graph(id='fahrattribut-plot'),
         html.Br(),
-    ]
+        html.H2(id='H5', children='Steuerung:'),
+        html.Div(children=[html.Div("Geschwindigkeit:") ,dcc.Input(id='input-on-submit', type='text')]),
+        html.Br(),
+        html.Button('Fahrparcour 1', id='btn-fp1', n_clicks=0, style={'marginLeft': 00, 'marginRight': 10}),
+        html.Button('Fahrparcour 2', id='btn-fp2', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
+        html.Button('Fahrparcour 3', id='btn-fp3', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
+        html.Button('Fahrparcour 4', id='btn-fp4', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
+        html.Button('Notfall Exit', id='btn-e', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
+        html.Br(),
+        html.Div(id='placeholder')
+    ], style={'marginLeft': 20}
 )
 
 @app.callback(
@@ -87,8 +99,6 @@ app.layout = html.Div(
 def update_KPI_DD(logFile):
     if logFile:
         data = readJSON(logFile)
-        global dfFahrattribut
-        dfFahrattribut = data
         fahrAttr = [{'label': ddLabels[key], 'value': key} for key in data.keys()]
         vmax, vmin, vmean, time, route = computeKPI(data)
         return vmax, vmin, vmean, time, route, fahrAttr
@@ -97,14 +107,56 @@ def update_KPI_DD(logFile):
 
 @app.callback(
     Output(component_id='fahrattribut-plot', component_property='figure'),
-    Input('dropdown-fahrattribut', 'value')
+    Input('dropdown-fahrattribut', 'value'),
+    State('dropdown-log', 'value')
 )
-def update_Fahrattribut(value):
+def update_Fahrattribut(value, logFile):
     if value in ddLabels:
+        dfFahrattribut = readJSON(logFile)
         fig = px.line(dfFahrattribut, y=dfFahrattribut[value], labels={value: ddLabels[value], 'index':'Zeit'}, title='Zeitliche Entwicklung - ' + ddLabels[value])
         return fig
     else:
         return px.line()
+
+@app.callback(
+    Output(component_id='placeholder', component_property='children'),
+    Output(component_id='dropdown-log', component_property='options'),
+    Input('btn-fp1', 'n_clicks'),
+    Input('btn-fp2', 'n_clicks'),
+    Input('btn-fp3', 'n_clicks'),
+    Input('btn-fp4', 'n_clicks'),
+    Input('btn-e', 'n_clicks'),
+    State('input-on-submit', 'value')
+)
+def displayClick(btn1, btn2, btn3, btn4, btn5, value):
+    sc = SC.SonicCar()
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+
+    v = int(value) if value != None else 50
+
+    if 'btn-fp1' in changed_id:
+        msg = 'Fahrparcour 1 wurde gestartet!'
+        sc.fp1(v)
+    elif 'btn-fp2' in changed_id:
+        msg = 'Fahrparcour 2 wurde gestartet!'
+        sc.fp2(v)
+    elif 'btn-fp3' in changed_id:
+        msg = 'Fahrparcour 3 wurde gestartet!'
+        sc.fp3(v)
+    elif 'btn-fp4' in changed_id:
+        msg = 'Fahrparcour 4 wurde gestartet!'
+        sc.fp4(v)
+    elif 'btn-e' in changed_id:
+        msg = 'Notfall Exit wurde durchgeführt!'
+        sc._active = False
+        sc.stop()
+        sc._worker.shutdown(wait=True)
+    else:
+        msg = 'Es wurde noch kein Fahrparcour gestartet!'
+    
+    time.sleep(1)
+    listLoggerFiles = getLoggerFiles()
+    return msg, listLoggerFiles
 
 
 if __name__ == '__main__':
