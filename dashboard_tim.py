@@ -12,6 +12,7 @@ import plotly.express as px
 from dash.dependencies import Input, Output, State
 from dash import callback_context
 import dash_bootstrap_components as dbc
+import basecar_tim as BC
 import soniccar_tim as SC
 
 def getLoggerFiles():
@@ -39,7 +40,7 @@ def computeKPI(data):
 listLoggerFiles = getLoggerFiles()
 ddLabels = {'v': 'Geschwindigkeit', 'sa': 'Lenkwinkel', 'dir': 'Richtung', 'dist': 'Abstand', 'inf': 'Infrarot'}
 
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(external_stylesheets=[dbc.themes.DARKLY])
 
 kpi_1 = dbc.Card([dbc.CardBody([html.H4("vMax") , html.P(id='kpi1')])])
 kpi_2 = dbc.Card([dbc.CardBody([html.H4("vMin") , html.P(id='kpi2')])])
@@ -64,14 +65,15 @@ app.layout = html.Div(
         html.H2(id='H2', children='Log-Datei:'),
         dcc.Dropdown(id='dropdown-log',
                      options=listLoggerFiles,
-                     placeholder='Bitte Logging-File wählen!', style={'width': 500}),
+                     placeholder='Bitte Logging-File wählen!', style={'color': 'black', 'width': 500}),
         html.Br(),
         html.H2(id='H3', children='KPI\'s:'),
         dbc.Row(cards),
         html.Br(),
         html.H2(id='H4', children='Fahrattribut:'),
         dcc.Dropdown(id='dropdown-fahrattribut',
-                     placeholder='Bitte Fahrattribut wählen!', style={'width': 500}),
+                     placeholder='Bitte Fahrattribut wählen!', style={'color': 'black', 'width': 500}),
+        html.Br(),    
         dcc.Graph(id='fahrattribut-plot'),
         html.Br(),
         html.H2(id='H5', children='Steuerung:'),
@@ -129,17 +131,19 @@ def update_Fahrattribut(value, logFile):
     State('input-on-submit', 'value')
 )
 def displayClick(btn1, btn2, btn3, btn4, btn5, value):
+    bc = BC.BaseCar()
     sc = SC.SonicCar()
+
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
 
     v = int(value) if value != None else 50
 
     if 'btn-fp1' in changed_id:
         msg = 'Fahrparcour 1 wurde gestartet!'
-        sc.fp1(v)
+        bc.fp1(v)
     elif 'btn-fp2' in changed_id:
         msg = 'Fahrparcour 2 wurde gestartet!'
-        sc.fp2(v)
+        bc.fp2(v)
     elif 'btn-fp3' in changed_id:
         msg = 'Fahrparcour 3 wurde gestartet!'
         sc.fp3(v)
