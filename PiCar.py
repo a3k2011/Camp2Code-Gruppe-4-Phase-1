@@ -76,10 +76,10 @@ class Sonic(BaseCar):
 
     @property
     def drive_data(self):
-        return (self.speed,
+        return [self.speed,
                 self.direction,
                 self.steering_angle,
-                self.distance)
+                self.distance]
     
     def usstop(self):
         self.us.stop()
