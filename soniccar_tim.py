@@ -30,7 +30,7 @@ class SonicCar(BCT.BaseCar):
     @property 
     def distance(self):
         dist = self._us.distance()
-        self._distance = dist if dist >= 0 else self.US_OFFSET+1
+        self._distance = dist if dist >= 0 else (self.US_OFFSET+1)
         return self._distance
 
     def getFahrdaten(self):
@@ -72,7 +72,27 @@ class SonicCar(BCT.BaseCar):
                 print("Kein gültiger Befehl oder gültige Geschwindigkeit!")
                 continue
 
-    def erkundeWelt(self, v, zeit=None):
+    def fp3(self, v):
+        self._active = True
+
+        # Initialisiere Threads
+        e = ThreadPoolExecutor(max_workers=4)
+        self._dlThread = e.submit(self.loggerFunction)
+        self._usThread = e.submit(self.usFunction)
+        e.shutdown(wait=False)
+
+        # Starte die Fahrt
+        if self._active:
+            self.drive(v, 1)
+
+        while not self._hindernis:
+            time.sleep(0.1)
+        
+        self._active = False
+        self.stop()
+        self._us.stop()
+
+    def fp4(self, v, zeit=None):
         self._active = True
         self._tmpspeed = v
 
@@ -101,9 +121,9 @@ class SonicCar(BCT.BaseCar):
         while self._active:
             if self._hindernis:
 
+                self.direction = -1
                 self.speed = 50
                 self.steering_angle = 45
-                self.direction = -1
 
                 cntTime = time.perf_counter()
                 while (time.perf_counter()-cntTime) < 2.55:
