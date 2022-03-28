@@ -60,7 +60,7 @@ class SonicCar(BCT.BaseCar):
         if self._active:
             self.drive(v, 1)
 
-        while not self._hindernis:
+        while self._active and not self._hindernis:
             time.sleep(0.1)
         
         # Ende
