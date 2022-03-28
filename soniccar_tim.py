@@ -11,19 +11,11 @@ class SonicCar(BCT.BaseCar):
 
     US_OFFSET = 15
     US_FREQ = 0.1
-    LOG_FREQ = 0.1
-    TIME_FREQ = 0.1
 
     def __init__(self):
         super().__init__()
         self._us = Ultrasonic()
         self._distance = None
-        self._timerThread = None
-        self._dlThread = None
-        self._usThread = None
-        self._rangierThread = None
-        self._inpThread = None
-        self._active = False
         self._hindernis = False
         self._tmpspeed = None
 
@@ -35,19 +27,6 @@ class SonicCar(BCT.BaseCar):
 
     def getFahrdaten(self):
         return {'v': self.speed, 'sa': self.steering_angle, 'dir': self.direction, 'dist': self._distance}
-
-    def zeitFunction(self, zeit):
-        cntTime = time.perf_counter()
-        while self._active and ((time.perf_counter()-cntTime) < zeit):
-            time.sleep(self.TIME_FREQ)
-        self._active = False
-
-    def loggerFunction(self):
-        self._dl.start()
-        while self._active:
-            self._dl.append(self.getFahrdaten())
-            time.sleep(self.LOG_FREQ)
-        self._dl.save()
 
     def usFunction(self):
         while self._active:
@@ -73,13 +52,11 @@ class SonicCar(BCT.BaseCar):
                 continue
 
     def fp3(self, v):
-        self._active = True
-
         # Initialisiere Threads
-        e = ThreadPoolExecutor(max_workers=4)
-        self._dlThread = e.submit(self.loggerFunction)
-        self._usThread = e.submit(self.usFunction)
-        e.shutdown(wait=False)
+        self._active = True
+        self._worker.submit(self.loggerFunction)
+        self._worker.submit(self.usFunction)
+        self._worker.shutdown(wait=False)
 
         # Starte die Fahrt
         if self._active:
@@ -88,33 +65,29 @@ class SonicCar(BCT.BaseCar):
         while not self._hindernis:
             time.sleep(0.1)
         
+        # Ende
         self._active = False
         self.stop()
         self._us.stop()
 
-    def fp4(self, v, zeit=None):
+    def fp4(self, v):
+        # Initialisiere Threads
         self._active = True
         self._tmpspeed = v
-
-        # Initialisiere Threads
-        e = ThreadPoolExecutor(max_workers=4)
-        if zeit == None:
-            self._inpThread = e.submit(self.inputFunction)
-        else:
-            self._timerThread = e.submit(self.zeitFunction, zeit)
-        self._dlThread = e.submit(self.loggerFunction)
-        self._usThread = e.submit(self.usFunction)
-        self._rangierThread = e.submit(self.rangieren)
+        self._worker.submit(self.loggerFunction)
+        self._worker.submit(self.usFunction)
+        self._worker.submit(self.inputFunction)
+        self._worker.submit(self.rangieren)
         
         # Starte die Fahrt
         if self._active:
             self.drive(v, 1)
             
         # Wartet auf Fertigstellung aller Threads
-        e.shutdown(wait=True)
+        self._worker.shutdown(wait=True)
 
         # Stopt die Fahrt
-        self.stop()   
+        self.stop()
         self._us.stop()
 
     def rangieren(self):
