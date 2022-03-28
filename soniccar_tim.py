@@ -1,15 +1,13 @@
 import os
 import time
 from datetime import datetime
-from concurrent import futures
-from concurrent.futures import ThreadPoolExecutor
 import basecar_tim as BCT
 from basisklassen import Ultrasonic
 
 
 class SonicCar(BCT.BaseCar):
 
-    US_OFFSET = 15
+    US_OFFSET = 20
     US_FREQ = 0.1
 
     def __init__(self):
@@ -37,7 +35,7 @@ class SonicCar(BCT.BaseCar):
 
     def inputFunction(self):
         while self._active:
-            inpUser = input("Fahrbefehl eingeben!")
+            inpUser = input("Fahrbefehl eingeben: ")
             dictBefehle = {'f': 'self.direction = 1', 'b': 'self.direction = -1', 'l': 'self.steering_angle = 50', 'r': 'self.steering_angle = 130', 'e': 'self._active = False'}
             try:
                 if inpUser in dictBefehle:
@@ -76,7 +74,7 @@ class SonicCar(BCT.BaseCar):
         self._tmpspeed = v
         self._worker.submit(self.loggerFunction)
         self._worker.submit(self.usFunction)
-        self._worker.submit(self.inputFunction)
+        #self._worker.submit(self.inputFunction)
         self._worker.submit(self.rangieren)
         
         # Starte die Fahrt

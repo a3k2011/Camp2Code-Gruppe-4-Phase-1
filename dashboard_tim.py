@@ -6,12 +6,10 @@ from pandas import read_json
 import time
 import datetime
 import dash
-from dash import dcc
-from dash import html
-import plotly.express as px
+from dash import dcc, html, callback_context
 from dash.dependencies import Input, Output, State
-from dash import callback_context
 import dash_bootstrap_components as dbc
+import plotly.express as px
 import basecar_tim as BC
 import soniccar_tim as SC
 
@@ -62,7 +60,7 @@ app.layout = html.Div(
                 children='Camp2Code - Gruppe 4',
                 style={'textAlign': 'center', 'marginTop': 40, 'marginBottom': 40}),
         html.Br(),
-        html.H2(id='H2', children='Log-Datei:'),
+        dbc.Row([dbc.Col([html.H2(id='H2', children='Log-Datei:'),
         dcc.Dropdown(id='dropdown-log',
                      options=listLoggerFiles,
                      placeholder='Bitte Logging-File wählen!', style={'color': 'black', 'width': 500}),
@@ -70,22 +68,26 @@ app.layout = html.Div(
         html.H2(id='H3', children='KPI\'s:'),
         dbc.Row(cards),
         html.Br(),
-        html.H2(id='H4', children='Fahrattribut:'),
-        dcc.Dropdown(id='dropdown-fahrattribut',
-                     placeholder='Bitte Fahrattribut wählen!', style={'color': 'black', 'width': 500}),
-        html.Br(),    
-        dcc.Graph(id='fahrattribut-plot'),
-        html.Br(),
-        html.H2(id='H5', children='Steuerung:'),
+        ]), 
+        dbc.Col([html.H2(id='H5', children='Steuerung:'),
         html.Div(children=[html.Div("Geschwindigkeit:") ,dcc.Input(id='input-on-submit', type='text')]),
         html.Br(),
         html.Button('Fahrparcour 1', id='btn-fp1', n_clicks=0, style={'marginLeft': 00, 'marginRight': 10}),
         html.Button('Fahrparcour 2', id='btn-fp2', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Button('Fahrparcour 3', id='btn-fp3', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Button('Fahrparcour 4', id='btn-fp4', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
-        html.Button('Notfall Exit', id='btn-e', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Br(),
-        html.Div(id='placeholder')
+        html.Div(id='placeholder'),
+        html.Br(),
+        html.Button('Notfall Exit', id='btn-e', n_clicks=0, style={'marginLeft': 00, 'marginRight': 10})
+        ])
+        ]),
+        html.H2(id='H4', children='Fahrattribut:'),
+        dcc.Dropdown(id='dropdown-fahrattribut',
+                     placeholder='Bitte Fahrattribut wählen!', style={'color': 'black', 'width': 500}),
+        html.Br(),    
+        dcc.Graph(id='fahrattribut-plot'),
+        html.Br(),
     ], style={'marginLeft': 20}
 )
 
