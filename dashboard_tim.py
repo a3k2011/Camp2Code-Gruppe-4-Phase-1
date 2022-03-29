@@ -10,8 +10,6 @@ from dash import dcc, html, callback_context
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
-import basecar_tim as BC
-import soniccar_tim as SC
 import infraredcar_tim as IC
 
 def getLoggerFiles():
@@ -35,6 +33,8 @@ def computeKPI(data):
     time = data.iloc[-1].name
     route = round(vmean * time,2)
     return vmax, vmin, vmean, time, route
+
+ic = IC.InfraredCar()
 
 listLoggerFiles = getLoggerFiles()
 ddLabels = {'v': 'Geschwindigkeit', 'sa': 'Lenkwinkel', 'dir': 'Richtung', 'dist': 'Abstand', 'inf': 'Infrarot'}
@@ -78,6 +78,7 @@ app.layout = html.Div(
         html.Button('Fahrparcour 3', id='btn-fp3', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Button('Fahrparcour 4', id='btn-fp4', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Button('Fahrparcour 5', id='btn-fp5', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
+        html.Button('Fahrparcour 6', id='btn-fp6', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Br(),
         html.Div(id='placeholder'),
         html.Br(),
@@ -146,13 +147,11 @@ def update_Fahrattribut(value, logFile):
     Input('btn-fp3', 'n_clicks'),
     Input('btn-fp4', 'n_clicks'),
     Input('btn-fp5', 'n_clicks'),
+    Input('btn-fp6', 'n_clicks'),
     Input('btn-e', 'n_clicks'),
     State('input-on-submit', 'value')
 )
-def displayClick(btn1, btn2, btn3, btn4, btn5, btn6, value):
-    bc = BC.BaseCar()
-    sc = SC.SonicCar()
-    ic = IC.InfraredCar()
+def displayClick(btn1, btn2, btn3, btn4, btn5, btn6, btn7, value):
 
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
 
@@ -160,31 +159,30 @@ def displayClick(btn1, btn2, btn3, btn4, btn5, btn6, value):
 
     if 'btn-fp1' in changed_id:
         msg = 'Fahrparcour 1 wurde gestartet!'
-        bc.fp1(v)
+        ic.fp1(v)
     elif 'btn-fp2' in changed_id:
         msg = 'Fahrparcour 2 wurde gestartet!'
-        bc.fp2(v)
+        ic.fp2(v)
     elif 'btn-fp3' in changed_id:
         msg = 'Fahrparcour 3 wurde gestartet!'
-        sc.fp3(v)
+        ic.fp3(v)
     elif 'btn-fp4' in changed_id:
         msg = 'Fahrparcour 4 wurde gestartet!'
-        sc.fp4(v)
+        ic.fp4(v)
     elif 'btn-fp5' in changed_id:
         msg = 'Fahrparcour 5 wurde gestartet!'
-        ic.fp5(v)    
+        ic.fp5(v)   
+    elif 'btn-fp6' in changed_id:
+        msg = 'Fahrparcour 6 wurde gestartet!'
+        ic.fp6(v)  
     elif 'btn-e' in changed_id:
         msg = 'Notfall Exit wurde durchgeführt!'
-        sc._active = False
-        sc.stop()
-        sc._worker.shutdown(wait=True)
         ic._active = False
-        ic.stop()
-        ic._worker.shutdown(wait=True)
+        ic._worker.shutdown(wait=False)
     else:
         msg = 'Es wurde noch kein Fahrparcour gestartet!'
     
-    time.sleep(1)
+    time.sleep(2)
     listLoggerFiles = getLoggerFiles()
     return msg, listLoggerFiles
 

@@ -38,12 +38,36 @@ class InfraredCar(SCT.SonicCar):
         while self._active:
             idx_min = str(np.argmin(self._analog))
             std = np.std(self._analog)
-            if std < 3.5:
+            if std < 3 and std != 0:
+                print(std)
                 self._active = False
                 break
             if idx_min in dictActions:
                     exec(dictActions[idx_min])
             time.sleep(self.INF_FREQ)
+
+    def lenkFunction2(self):
+        dictActions = {'0': 'self.steering_angle = 45',
+                        '1': 'self.steering_angle = 60',
+                        '2': 'self.steering_angle = 90',
+                        '3': 'self.steering_angle = 120',
+                        '4': 'self.steering_angle = 135'}
+        while self._active:
+            print(self._active)
+            idx_min = str(np.argmin(self._analog))
+            std = np.std(self._analog)
+            if std < 3 and std != 0:
+                cntTimer = time.perf_counter()
+                self.direction=-1
+                self.steering_angle = 90
+                while np.argmin(self._analog) != 2 and (time.perf_counter()-cntTimer)<2 and self._active:
+                    time.sleep(self.INF_FREQ)
+                if (time.perf_counter()-cntTimer)>3:
+                    self._active = False
+                self.direction=1
+            if idx_min in dictActions and self._active:
+                    exec(dictActions[idx_min])
+                    time.sleep(self.INF_FREQ)
 
     def inf_test(self, v):
         # Initialisiere Threads
@@ -75,3 +99,21 @@ class InfraredCar(SCT.SonicCar):
         self._worker.shutdown(wait=True)
         self.steering_angle = 90
         self.stop()
+        print("Fahrparcour 5 beendet.")
+
+    def fp6(self, v):
+        # Initialisiere Threads
+        self._active = True
+        self._worker.submit(self.loggerFunction)
+        self._worker.submit(self.usFunction)
+        self._worker.submit(self.infFunction)
+        self._worker.submit(self.lenkFunction2)
+        
+        # Vorwaerts 3sec
+        self.drive(v, 1)
+
+        # Ende
+        self._worker.shutdown(wait=True)
+        self.steering_angle = 90
+        self.stop()
+        print("Fahrparcour 6 beendet.")
