@@ -117,7 +117,21 @@ def update_KPI_DD(logFile):
 def update_Fahrattribut(value, logFile):
     if value in ddLabels:
         dfFahrattribut = readJSON(logFile)
-        fig = px.line(dfFahrattribut, y=dfFahrattribut[value], labels={value: ddLabels[value], 'index':'Zeit'}, title='Zeitliche Entwicklung - ' + ddLabels[value])
+        
+        if not value == 'inf':
+            fig = px.line(dfFahrattribut, y=dfFahrattribut[value], labels={value: ddLabels[value], 'index':'Zeit'}, title='Zeitliche Entwicklung - ' + ddLabels[value])
+        else:
+
+            splitDF = pd.DataFrame(dfFahrattribut['inf'].tolist(), columns=['i1','i2','i3','i4','i5'])
+            listDF = [list(i) for i in zip(*splitDF.values)]
+
+            fig = px.line(dfFahrattribut, y=listDF)
+
+            colNames = {'wide_variable_0': 'i0', 'wide_variable_1': 'i1', 'wide_variable_2': 'i2', 'wide_variable_3': 'i3', 'wide_variable_4': 'i4'}
+            fig.for_each_trace(lambda t: t.update(name = colNames[t.name],
+                                      legendgroup = colNames[t.name],
+                                      hovertemplate = t.hovertemplate.replace(t.name, colNames[t.name])
+                                     ))
         return fig
     else:
         return px.line()

@@ -2,6 +2,7 @@ import sys
 import time
 import basecar_tim as BC
 import soniccar_tim as SC
+import infraredcar_tim as IC
 
 
 def main():
@@ -9,6 +10,7 @@ def main():
     # Cars erstellen
     bc = BC.BaseCar()
     sc = SC.SonicCar()
+    ic = IC.InfraredCar()
 
     # Test Fahrparcour 1
     #bc.fp1(50)
@@ -32,6 +34,9 @@ def main():
 
         except Exception:
             print("Nur Zahlenwerte erlaubt!")
+
+    # Test Fahrparcour 1 mit INF-Car
+    ic.fp1(50)
 
 
 if __name__ == '__main__':

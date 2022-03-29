@@ -16,7 +16,7 @@ class Datenlogger:
         """
         self._log_name = None
         self._log_file = None
-        self._dataframe = pd.DataFrame()
+        self._dataframe = pd.DataFrame().astype('object')
         self._cntTime = None
         self._logger_running = False
         self._log_file_path = log_file_path
@@ -32,8 +32,12 @@ class Datenlogger:
         Args:
             data (_type_): ein Element (Tuple, Liste, Dict) wird an den Logger uebergeben
         """
-        dataDF = pd.DataFrame(data, index=[round((time.perf_counter()-self._cntTime),2)])
-        self._dataframe = pd.concat([self._dataframe, dataDF], verify_integrity=True)
+        idx = [round((time.perf_counter()-self._cntTime),2)]
+
+        dataframe = pd.DataFrame.from_dict(data, orient='index', dtype='object').transpose()
+        dataframe.index = idx
+
+        self._dataframe = pd.concat([self._dataframe, dataframe], verify_integrity=True)
 
     def save(self):
         """speichert die uebergebenen Daten"""
