@@ -8,7 +8,7 @@ from basisklassen import Infrared
 
 class InfraredCar(SCT.SonicCar):
 
-    INF_FREQ = 0.1
+    INF_FREQ = 0.05
 
     def __init__(self):
         super().__init__()
@@ -38,7 +38,8 @@ class InfraredCar(SCT.SonicCar):
         while self._active:
             idx_min = str(np.argmin(self._analog))
             std = np.std(self._analog)
-            if std < 5:
+            if std < 3.5:
+                print(std)
                 self._active = False
                 break
             if idx_min in dictActions:

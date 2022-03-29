@@ -12,6 +12,7 @@ import dash_bootstrap_components as dbc
 import plotly.express as px
 import basecar_tim as BC
 import soniccar_tim as SC
+import infraredcar_tim as IC
 
 def getLoggerFiles():
     wcLoggerOrdner = os.path.join('Logger', '*')
@@ -76,6 +77,7 @@ app.layout = html.Div(
         html.Button('Fahrparcour 2', id='btn-fp2', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Button('Fahrparcour 3', id='btn-fp3', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Button('Fahrparcour 4', id='btn-fp4', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
+        html.Button('Fahrparcour 5', id='btn-fp5', n_clicks=0, style={'marginLeft': 10, 'marginRight': 10}),
         html.Br(),
         html.Div(id='placeholder'),
         html.Br(),
@@ -143,12 +145,14 @@ def update_Fahrattribut(value, logFile):
     Input('btn-fp2', 'n_clicks'),
     Input('btn-fp3', 'n_clicks'),
     Input('btn-fp4', 'n_clicks'),
+    Input('btn-fp5', 'n_clicks'),
     Input('btn-e', 'n_clicks'),
     State('input-on-submit', 'value')
 )
-def displayClick(btn1, btn2, btn3, btn4, btn5, value):
+def displayClick(btn1, btn2, btn3, btn4, btn5, btn6, value):
     bc = BC.BaseCar()
     sc = SC.SonicCar()
+    ic = IC.InfraredCar()
 
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
 
@@ -166,11 +170,17 @@ def displayClick(btn1, btn2, btn3, btn4, btn5, value):
     elif 'btn-fp4' in changed_id:
         msg = 'Fahrparcour 4 wurde gestartet!'
         sc.fp4(v)
+    elif 'btn-fp5' in changed_id:
+        msg = 'Fahrparcour 5 wurde gestartet!'
+        ic.fp5(v)    
     elif 'btn-e' in changed_id:
         msg = 'Notfall Exit wurde durchgeführt!'
         sc._active = False
         sc.stop()
         sc._worker.shutdown(wait=True)
+        ic._active = False
+        ic.stop()
+        ic._worker.shutdown(wait=True)
     else:
         msg = 'Es wurde noch kein Fahrparcour gestartet!'
     

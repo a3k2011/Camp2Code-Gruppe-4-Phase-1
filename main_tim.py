@@ -39,7 +39,7 @@ def main():
     #ic.inf_test(50)
 
     # Test Fahrparcour 5
-    ic.fp5(50)
+    ic.fp5(40)
 
 
 if __name__ == '__main__':
