@@ -3,13 +3,16 @@ Grundfunktionen des PiCar
 """
 
 from curses.ascii import isdigit
-from pydoc import isdata
+from tkinter import N
+
+from pyrsistent import v
 import basisklassen as bk
 import time
 from datetime import datetime
 import json
 import os
 import datenlogger
+import numpy as np
 
 STEERINGE_ANGLE_MAX = 45
 DIRECTION_FORWARD = 1
@@ -66,7 +69,6 @@ class BaseCar:
             self.bw.backward()
         else:
             self.bw.stop()
-        self.drive_data
 
     def stop(self):
         """sofortiges anhalten des PiCar"""
@@ -106,14 +108,12 @@ class BaseCar:
             value (int): Soll-Winkel der Lenkung (-45 ... 45 Grad)
         """
         if value > STEERINGE_ANGLE_MAX:
-            self._steering_angle = 90 + STEERINGE_ANGLE_MAX
+            value = STEERINGE_ANGLE_MAX
         elif value < (0 - STEERINGE_ANGLE_MAX):
-            self._steering_angle = 90 - STEERINGE_ANGLE_MAX
+            value = 0 - STEERINGE_ANGLE_MAX
         else:
-            self._steering_angle = 90 + value
-        self._steering_angle = self._steering_angle
-        self.fw.turn(self._steering_angle)
-        self.drive_data
+            self._steering_angle = value
+        self.fw.turn(90 - self._steering_angle)
 
     @property
     def speed(self):
@@ -133,8 +133,7 @@ class BaseCar:
         else:
             self._speed = value
 
-    @property
-    def drive_data(self):
+    def read_drive_data(self):
         """Ausgabe der Fahrdaten
 
         Returns:
@@ -167,8 +166,7 @@ class SonicCar(BaseCar):
         self._distance = self.us.distance()
         return self._distance
 
-    @property
-    def drive_data(self):
+    def read_drive_data(self):
         """Ausgabe der Fahrdaten
 
         Returns:
@@ -202,19 +200,20 @@ class SensorCar(SonicCar):
         self._ir_sensors = self.ir.read_analog()
         return self._ir_sensors
 
-    @property
-    def drive_data(self):
+    def read_drive_data(self):
         """Ausgabe der Fahrdaten
 
         Returns:
             tuple: speed, direction, steering_angle, distance, ir_sensors
         """
+
         data = [
             self._speed,
             self._direction,
             self._steering_angle,
             self.distance,
         ] + self.ir_sensor_analog
+
         self.logger_log(data)
         return data
 
