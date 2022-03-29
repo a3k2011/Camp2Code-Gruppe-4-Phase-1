@@ -127,8 +127,8 @@ def update_Fahrattribut(value, logFile):
 
             splitDF = pd.DataFrame(dfFahrattribut['inf'].tolist(), columns=['i1','i2','i3','i4','i5'])
             listDF = [list(i) for i in zip(*splitDF.values)]
-
-            fig = px.line(dfFahrattribut, y=listDF)
+            list1 = [list(i[1:]) for i in listDF]
+            fig = px.line(dfFahrattribut.iloc[1:,:], y=list1)
 
             colNames = {'wide_variable_0': 'i0', 'wide_variable_1': 'i1', 'wide_variable_2': 'i2', 'wide_variable_3': 'i3', 'wide_variable_4': 'i4'}
             fig.for_each_trace(lambda t: t.update(name = colNames[t.name],
@@ -140,7 +140,6 @@ def update_Fahrattribut(value, logFile):
         return px.line()
 
 @app.callback(
-    Output(component_id='placeholder', component_property='children'),
     Output(component_id='dropdown-log', component_property='options'),
     Input('btn-fp1', 'n_clicks'),
     Input('btn-fp2', 'n_clicks'),
@@ -158,33 +157,59 @@ def displayClick(btn1, btn2, btn3, btn4, btn5, btn6, btn7, value):
     v = int(value) if value != None else 50
 
     if 'btn-fp1' in changed_id:
-        msg = 'Fahrparcour 1 wurde gestartet!'
         ic.fp1(v)
     elif 'btn-fp2' in changed_id:
-        msg = 'Fahrparcour 2 wurde gestartet!'
         ic.fp2(v)
     elif 'btn-fp3' in changed_id:
-        msg = 'Fahrparcour 3 wurde gestartet!'
         ic.fp3(v)
     elif 'btn-fp4' in changed_id:
-        msg = 'Fahrparcour 4 wurde gestartet!'
         ic.fp4(v)
     elif 'btn-fp5' in changed_id:
-        msg = 'Fahrparcour 5 wurde gestartet!'
         ic.fp5(v)   
     elif 'btn-fp6' in changed_id:
-        msg = 'Fahrparcour 6 wurde gestartet!'
         ic.fp6(v)  
     elif 'btn-e' in changed_id:
-        msg = 'Notfall Exit wurde durchgeführt!'
         ic._active = False
         ic._worker.shutdown(wait=False)
     else:
-        msg = 'Es wurde noch kein Fahrparcour gestartet!'
+        pass
     
     time.sleep(2)
     listLoggerFiles = getLoggerFiles()
-    return msg, listLoggerFiles
+    return listLoggerFiles
+
+@app.callback(
+    Output(component_id='placeholder', component_property='children'),
+    Input('btn-fp1', 'n_clicks'),
+    Input('btn-fp2', 'n_clicks'),
+    Input('btn-fp3', 'n_clicks'),
+    Input('btn-fp4', 'n_clicks'),
+    Input('btn-fp5', 'n_clicks'),
+    Input('btn-fp6', 'n_clicks'),
+    Input('btn-e', 'n_clicks')
+)
+def messageButton(btn1, btn2, btn3, btn4, btn5, btn6, btn7):
+
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+
+    if 'btn-fp1' in changed_id:
+        msg = 'Fahrparcour 1 wurde gestartet!'
+    elif 'btn-fp2' in changed_id:
+        msg = 'Fahrparcour 2 wurde gestartet!'
+    elif 'btn-fp3' in changed_id:
+        msg = 'Fahrparcour 3 wurde gestartet!'
+    elif 'btn-fp4' in changed_id:
+        msg = 'Fahrparcour 4 wurde gestartet!'
+    elif 'btn-fp5' in changed_id:
+        msg = 'Fahrparcour 5 wurde gestartet!' 
+    elif 'btn-fp6' in changed_id:
+        msg = 'Fahrparcour 6 wurde gestartet!' 
+    elif 'btn-e' in changed_id:
+        msg = 'Notfall Exit wurde durchgeführt!'
+    else:
+        msg = 'Es wurde noch kein Fahrparcour gestartet!'
+    
+    return msg
 
 
 if __name__ == '__main__':

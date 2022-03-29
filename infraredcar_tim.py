@@ -39,13 +39,11 @@ class InfraredCar(SCT.SonicCar):
             idx_min = str(np.argmin(self._analog))
             std = np.std(self._analog)
             if std < 3 and std != 0:
-                print(std)
                 self._active = False
-                break
-            if idx_min in dictActions:
+            if idx_min in dictActions and self._active:
                     exec(dictActions[idx_min])
-            time.sleep(self.INF_FREQ)
-
+                    time.sleep(self.INF_FREQ)
+            
     def lenkFunction2(self):
         dictActions = {'0': 'self.steering_angle = 45',
                         '1': 'self.steering_angle = 60',
@@ -53,7 +51,6 @@ class InfraredCar(SCT.SonicCar):
                         '3': 'self.steering_angle = 120',
                         '4': 'self.steering_angle = 135'}
         while self._active:
-            print(self._active)
             idx_min = str(np.argmin(self._analog))
             std = np.std(self._analog)
             if std < 3 and std != 0:
@@ -69,7 +66,8 @@ class InfraredCar(SCT.SonicCar):
                     exec(dictActions[idx_min])
                     time.sleep(self.INF_FREQ)
 
-    def inf_test(self, v):
+    def infrarot_test(self):
+        print("Infrarot Test gestartet.")
         # Initialisiere Threads
         self._active = True
         self._worker.submit(self.loggerFunction)
@@ -83,8 +81,10 @@ class InfraredCar(SCT.SonicCar):
         # Ende
         self._active = False
         self.stop()
+        print("Infrarot Test beendet.")
 
     def fp5(self, v):
+        print("Fahrparcour 5 gestartet.")
         # Initialisiere Threads
         self._active = True
         self._worker.submit(self.loggerFunction)
@@ -102,6 +102,7 @@ class InfraredCar(SCT.SonicCar):
         print("Fahrparcour 5 beendet.")
 
     def fp6(self, v):
+        print("Fahrparcour 6 gestartet.")
         # Initialisiere Threads
         self._active = True
         self._worker.submit(self.loggerFunction)
