@@ -2,6 +2,7 @@ import basisklassen
 import time
 import json
 import numpy as np
+import datenlogger
 
 STEERINGE_ANGLE_MAX = 45
 
@@ -16,8 +17,21 @@ class BaseCar:
             turning_offset = data["turning_offset"]
             forward_A = data["forward_A"]
             forward_B = data["forward_B"]
+            self._log_file_path = data.get("log_file_path")
+            if self._log_file_path == None:
+                self._log_file_path = "Folder"
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
+        self._dl = datenlogger.Datenlogger(log_file_path=self._log_file_path)
+
+    def logger_start(self):
+        self._dl.start()
+
+    def logger_log(self, data):
+        self._dl.append(data)
+
+    def logger_save(self):
+        self._dl.save()
 
     @property
     def speed(self):
@@ -41,9 +55,9 @@ class BaseCar:
 
     @steering_angle.setter
     def steering_angle(self, value):
-        """Hier wird auf ein anderes Winkelsystem normiert. 
-        0 Grad = geradeaus, 
-        -45 Grad ist max links, 
+        """Hier wird auf ein anderes Winkelsystem normiert.
+        0 Grad = geradeaus,
+        -45 Grad ist max links,
         +45 Grad ist max rechts"""
         if value > STEERINGE_ANGLE_MAX:
             self._steering_angle = 90 + STEERINGE_ANGLE_MAX
@@ -131,21 +145,21 @@ class SensorCar(Sonic):
                 ir_result = 100
             else:
                 if sd[4]:  # stark nach links
-                    ir_result = -40
-                if sd[4] and sd[3]:  # viel nach links
-                    ir_result = -30
-                if sd[3]:  # etwas nach links
-                    ir_result = -20
-                if sd[3] and sd[2]:  # etwas nach links
-                    ir_result = -10
-                if sd[0]:  # stark nach rechts
                     ir_result = 40
-                if sd[0] and sd[1]:  #
+                if sd[4] and sd[3]:  # viel nach links
                     ir_result = 30
-                if sd[1]:  # etwas nach links
+                if sd[3]:  # etwas nach links
                     ir_result = 20
-                if sd[1] and sd[2]:  # etwas nach links
+                if sd[3] and sd[2]:  # etwas nach links
                     ir_result = 10
+                if sd[0]:  # stark nach rechts
+                    ir_result = -40
+                if sd[0] and sd[1]:  #
+                    ir_result = -30
+                if sd[1]:  # etwas nach links
+                    ir_result = -20
+                if sd[1] and sd[2]:  # etwas nach links
+                    ir_result = -10
 
         if ir_result < 100:
             self._steering_soll = self._steering_soll[1:]
@@ -171,4 +185,3 @@ class SensorCar(Sonic):
 
         self.logger_log(data)
         return data
-
