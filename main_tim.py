@@ -35,8 +35,11 @@ def main():
         except Exception:
             print("Nur Zahlenwerte erlaubt!")
 
-    # Test Fahrparcour 1 mit INF-Car
-    ic.fp1(50)
+    # Test mit INF-Car
+    #ic.inf_test(50)
+
+    # Test Fahrparcour 5
+    ic.fp5(50)
 
 
 if __name__ == '__main__':

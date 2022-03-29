@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime
+import numpy as np
 import soniccar_tim as SCT
 from basisklassen import Infrared
 
@@ -28,7 +29,24 @@ class InfraredCar(SCT.SonicCar):
             self.analog
             time.sleep(self.INF_FREQ)
 
-    def fp1(self, v):
+    def lenkFunction(self):
+        dictActions = {'0': 'self.steering_angle = 45',
+                        '1': 'self.steering_angle = 60',
+                        '2': 'self.steering_angle = 90',
+                        '3': 'self.steering_angle = 120',
+                        '4': 'self.steering_angle = 135'}
+        while self._active:
+            idx_min = str(np.argmin(self._analog))
+            std = np.std(self._analog)
+            if std < 5:
+                self._active = False
+                break
+            if idx_min in dictActions:
+                    exec(dictActions[idx_min])
+
+            time.sleep(self.INF_FREQ)
+
+    def inf_test(self, v):
         # Initialisiere Threads
         self._active = True
         self._worker.submit(self.loggerFunction)
@@ -36,18 +54,25 @@ class InfraredCar(SCT.SonicCar):
         self._worker.submit(self.infFunction)
         self._worker.shutdown(wait=False)
 
-        # Vorwaerts 3sec
-        self.drive(v, 1)
-        time.sleep(3)
-
-        # Stillstand 1sec
-        self.stop()
-        time.sleep(1)
-
-        # Rueckwaerts 3sec
-        self.drive(v, -1)
+        # Start
         time.sleep(3)
 
         # Ende
         self._active = False
+        self.stop()
+
+    def fp5(self, v):
+        # Initialisiere Threads
+        self._active = True
+        self._worker.submit(self.loggerFunction)
+        self._worker.submit(self.usFunction)
+        self._worker.submit(self.infFunction)
+        self._worker.submit(self.lenkFunction)
+        
+        # Vorwaerts 3sec
+        self.drive(v, 1)
+
+        # Ende
+        self._worker.shutdown(wait=True)
+        self.steering_angle = 90
         self.stop()
