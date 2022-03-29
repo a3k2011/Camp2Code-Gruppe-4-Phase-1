@@ -23,12 +23,12 @@ class BaseCar(object):
         self.steering_angle = 90
         self.direction = 1
 
-    def startMulitasking(self):
+    def initMT(self):
         self._active = True
         self._dl = dl.Datenlogger("Logger")
         self._worker = ThreadPoolExecutor(max_workers=4)
         self._worker.submit(self.loggerFunction)
-
+            
     @staticmethod 
     def readJSON():
         with open("config.json", "r") as f:
@@ -80,7 +80,7 @@ class BaseCar(object):
     def fp1(self, v):
         print("Fahrparcour 1 gestartet.")
         # Initialisiere Mulititasking
-        self.startMulitasking()
+        self.initMT()
         self._worker.shutdown(wait=False)
 
         # Vorwaerts 3sec
@@ -103,7 +103,7 @@ class BaseCar(object):
     def fp2(self, v):
         print("Fahrparcour 2 gestartet.")
         # Initialisiere Threads
-        self.startMulitasking()
+        self.initMT()
         self._worker.shutdown(wait=False)
 
         for sa in self.MAXSA:

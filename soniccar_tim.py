@@ -1,8 +1,6 @@
 import os
 import time
 from datetime import datetime
-from concurrent import futures
-from concurrent.futures import ThreadPoolExecutor
 import basecar_tim as BCT
 from basisklassen import Ultrasonic
 import datenlogger_tim  as dl
@@ -21,11 +19,8 @@ class SonicCar(BCT.BaseCar):
         self._tmpspeed = None
 
 
-    def startMulitasking(self):
-        self._active = True
-        self._dl = dl.Datenlogger("Logger")
-        self._worker = ThreadPoolExecutor(max_workers=4)
-        self._worker.submit(self.loggerFunction)
+    def initMT(self):
+        super().initMT()
         self._worker.submit(self.usFunction)
         
     @property 
@@ -63,7 +58,7 @@ class SonicCar(BCT.BaseCar):
     def fp3(self, v):
         print("Fahrparcour 3 gestartet.")
         # Initialisiere Multitasking
-        self.startMulitasking()
+        self.initMT()
         self._worker.shutdown(wait=False)
 
         # Starte die Fahrt
@@ -81,7 +76,7 @@ class SonicCar(BCT.BaseCar):
     def fp4(self, v):
         print("Fahrparcour 4 gestartet.")
         # Initialisiere Multitasking
-        self.startMulitasking()
+        self.initMT()
         self._tmpspeed = v
         #self._worker.submit(self.inputFunction)
         self._worker.submit(self.rangieren)
