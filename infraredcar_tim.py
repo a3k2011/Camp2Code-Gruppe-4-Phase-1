@@ -39,12 +39,10 @@ class InfraredCar(SCT.SonicCar):
             idx_min = str(np.argmin(self._analog))
             std = np.std(self._analog)
             if std < 3.5:
-                print(std)
                 self._active = False
                 break
             if idx_min in dictActions:
                     exec(dictActions[idx_min])
-
             time.sleep(self.INF_FREQ)
 
     def inf_test(self, v):
