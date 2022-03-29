@@ -185,10 +185,11 @@ class SensorCar(SonicCar):
         SonicCar (_type_): Erbt von der Klasse SonicCar
     """
 
-    def __init__(self):
+    def __init__(self, filter_deepth: int = 5):
         super().__init__()
         self.ir = bk.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
+        self._steering_soll = [0] * filter_deepth
 
     @property
     def ir_sensor_analog(self):
@@ -199,6 +200,49 @@ class SensorCar(SonicCar):
         """
         self._ir_sensors = self.ir.read_analog()
         return self._ir_sensors
+
+    def angle_from_ir(self):
+        ir_data = self.ir_sensor_analog
+        sd = [0, 0, 0, 0, 0]
+        ir_result = 0
+        for i in range(5):
+            if ir_data[i] < (0.6 * np.max(ir_data)):
+                sd[i] = 1
+            else:
+                sd[i] = 0
+        if np.mean(ir_data) < 15:  # alles dunkel,
+            ir_result = 100  # stopp-Bedingung
+        else:
+            if np.sum(sd) == 5:  # alle low -> nicht möglich
+                ir_result = 100
+            elif np.sum(sd) == 0:
+                ir_result = 100
+            else:
+                if sd[4]:  # stark nach links
+                    ir_result = -45
+                if sd[4] and sd[3]:  # viel nach links
+                    ir_result = -30
+                if sd[3]:  # etwas nach links
+                    ir_result = -20
+                if sd[3] and sd[2]:  # etwas nach links
+                    ir_result = -10
+                if sd[0]:  # stark nach rechts
+                    ir_result = 45
+                if sd[0] and sd[1]:  #
+                    ir_result = 30
+                if sd[1]:  # etwas nach links
+                    ir_result = 20
+                if sd[1] and sd[2]:  # etwas nach links
+                    ir_result = 10
+
+        if ir_result < 100:
+            self._steering_soll = self._steering_soll[1:]
+            self._steering_soll.append(ir_result)
+            ir_out = np.mean(self._steering_soll)
+        else:
+            ir_out = 100
+        print(ir_data, "-->", ir_result, "-", ir_out)
+        return ir_out
 
     def read_drive_data(self):
         """Ausgabe der Fahrdaten
@@ -212,7 +256,7 @@ class SensorCar(SonicCar):
             self._direction,
             self._steering_angle,
             self.distance,
-        ] + self.ir_sensor_analog
+        ] + self._ir_sensor_analog
 
         self.logger_log(data)
         return data
