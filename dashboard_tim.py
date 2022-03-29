@@ -170,11 +170,11 @@ def displayClick(btn1, btn2, btn3, btn4, btn5, btn6, btn7, value):
         ic.fp6(v)  
     elif 'btn-e' in changed_id:
         ic._active = False
-        ic._worker.shutdown(wait=False)
+        ic._worker.shutdown(wait=True)
     else:
         pass
     
-    time.sleep(2)
+    time.sleep(1)
     listLoggerFiles = getLoggerFiles()
     return listLoggerFiles
 

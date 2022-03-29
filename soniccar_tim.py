@@ -1,8 +1,11 @@
 import os
 import time
 from datetime import datetime
+from concurrent import futures
+from concurrent.futures import ThreadPoolExecutor
 import basecar_tim as BCT
 from basisklassen import Ultrasonic
+import datenlogger_tim  as dl
 
 
 class SonicCar(BCT.BaseCar):
@@ -17,6 +20,14 @@ class SonicCar(BCT.BaseCar):
         self._hindernis = False
         self._tmpspeed = None
 
+
+    def startMulitasking(self):
+        self._active = True
+        self._dl = dl.Datenlogger("Logger")
+        self._worker = ThreadPoolExecutor(max_workers=4)
+        self._worker.submit(self.loggerFunction)
+        self._worker.submit(self.usFunction)
+        
     @property 
     def distance(self):
         dist = self._us.distance()
@@ -50,15 +61,13 @@ class SonicCar(BCT.BaseCar):
                 continue
 
     def fp3(self, v):
-        # Initialisiere Threads
-        self._active = True
-        self._worker.submit(self.loggerFunction)
-        self._worker.submit(self.usFunction)
+        print("Fahrparcour 3 gestartet.")
+        # Initialisiere Multitasking
+        self.startMulitasking()
         self._worker.shutdown(wait=False)
 
         # Starte die Fahrt
-        if self._active:
-            self.drive(v, 1)
+        self.drive(v, 1)
 
         while self._active and not self._hindernis:
             time.sleep(0.1)
@@ -67,19 +76,18 @@ class SonicCar(BCT.BaseCar):
         self._active = False
         self.stop()
         self._us.stop()
+        print("Fahrparcour 3 beendet.")
 
     def fp4(self, v):
-        # Initialisiere Threads
-        self._active = True
+        print("Fahrparcour 4 gestartet.")
+        # Initialisiere Multitasking
+        self.startMulitasking()
         self._tmpspeed = v
-        self._worker.submit(self.loggerFunction)
-        self._worker.submit(self.usFunction)
         #self._worker.submit(self.inputFunction)
         self._worker.submit(self.rangieren)
         
         # Starte die Fahrt
-        if self._active:
-            self.drive(v, 1)
+        self.drive(v, 1)
             
         # Wartet auf Fertigstellung aller Threads
         self._worker.shutdown(wait=True)
@@ -87,6 +95,7 @@ class SonicCar(BCT.BaseCar):
         # Stopt die Fahrt
         self.stop()
         self._us.stop()
+        print("Fahrparcour 4 beendet.")
 
     def rangieren(self):
         while self._active:

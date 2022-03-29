@@ -16,12 +16,18 @@ class BaseCar(object):
         self._json = self.readJSON()
         self._fw = bk.Front_Wheels(turning_offset=self._json["turning_offset"])
         self._bw = bk.Back_Wheels(forward_A=self._json["forward_A"], forward_B=self._json["forward_B"])
-        self._worker = ThreadPoolExecutor(max_workers=4)
-        self._dl = dl.Datenlogger("Logger")
+        self._worker = None
+        self._dl = None
         self._active = False
         # self.speed = 0
         self.steering_angle = 90
         self.direction = 1
+
+    def startMulitasking(self):
+        self._active = True
+        self._dl = dl.Datenlogger("Logger")
+        self._worker = ThreadPoolExecutor(max_workers=4)
+        self._worker.submit(self.loggerFunction)
 
     @staticmethod 
     def readJSON():
@@ -72,9 +78,9 @@ class BaseCar(object):
         self._dl.save()
 
     def fp1(self, v):
-        # Initialisiere Threads
-        self._active = True
-        self._worker.submit(self.loggerFunction)
+        print("Fahrparcour 1 gestartet.")
+        # Initialisiere Mulititasking
+        self.startMulitasking()
         self._worker.shutdown(wait=False)
 
         # Vorwaerts 3sec
@@ -92,11 +98,12 @@ class BaseCar(object):
         # Ende
         self._active = False
         self.stop()
+        print("Fahrparcour 1 beendet.")
 
     def fp2(self, v):
+        print("Fahrparcour 2 gestartet.")
         # Initialisiere Threads
-        self._active = True
-        self._worker.submit(self.loggerFunction)
+        self.startMulitasking()
         self._worker.shutdown(wait=False)
 
         for sa in self.MAXSA:
@@ -123,3 +130,4 @@ class BaseCar(object):
         # Ende
         self._active = False
         self.stop()
+        print("Fahrparcour 2 beendet.")

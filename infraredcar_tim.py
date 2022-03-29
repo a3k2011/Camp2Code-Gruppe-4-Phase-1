@@ -2,8 +2,11 @@ import os
 import time
 from datetime import datetime
 import numpy as np
+from concurrent import futures
+from concurrent.futures import ThreadPoolExecutor
 import soniccar_tim as SCT
 from basisklassen import Infrared
+import datenlogger_tim  as dl
 
 
 class InfraredCar(SCT.SonicCar):
@@ -14,6 +17,15 @@ class InfraredCar(SCT.SonicCar):
         super().__init__()
         self._inf = Infrared()
         self._analog = None
+
+    def startMulitasking(self):
+        print("Starte MT")
+        self._active = True
+        self._dl = dl.Datenlogger("Logger")
+        self._worker = ThreadPoolExecutor(max_workers=4)
+        self._worker.submit(self.loggerFunction)
+        self._worker.submit(self.usFunction)
+        self._worker.submit(self.infFunction)
 
     @property
     def analog(self):
@@ -68,11 +80,8 @@ class InfraredCar(SCT.SonicCar):
 
     def infrarot_test(self):
         print("Infrarot Test gestartet.")
-        # Initialisiere Threads
-        self._active = True
-        self._worker.submit(self.loggerFunction)
-        self._worker.submit(self.usFunction)
-        self._worker.submit(self.infFunction)
+        # Initialisiere Multitasking
+        self.startMulitasking()
         self._worker.shutdown(wait=False)
 
         # Start
@@ -85,11 +94,8 @@ class InfraredCar(SCT.SonicCar):
 
     def fp5(self, v):
         print("Fahrparcour 5 gestartet.")
-        # Initialisiere Threads
-        self._active = True
-        self._worker.submit(self.loggerFunction)
-        self._worker.submit(self.usFunction)
-        self._worker.submit(self.infFunction)
+        # Initialisiere Multitasking
+        self.startMulitasking()
         self._worker.submit(self.lenkFunction)
         
         # Vorwaerts 3sec
@@ -103,11 +109,8 @@ class InfraredCar(SCT.SonicCar):
 
     def fp6(self, v):
         print("Fahrparcour 6 gestartet.")
-        # Initialisiere Threads
-        self._active = True
-        self._worker.submit(self.loggerFunction)
-        self._worker.submit(self.usFunction)
-        self._worker.submit(self.infFunction)
+        # Initialisiere Multitasking
+        self.startMulitasking()
         self._worker.submit(self.lenkFunction2)
         
         # Vorwaerts 3sec
