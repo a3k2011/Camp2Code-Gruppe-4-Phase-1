@@ -8,16 +8,14 @@ import plotly.express as px
 from dash.dependencies import Input, Output, State
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-import PiCar_work as PiCar
+import PiCar
 
 
 df = None
-car = PiCar.SensorCar()
+car = PiCar.SensorCar(filter_deepth=4)
 
 
 def getLoggerFiles():
-    # wcLoggerOrdner = os.path.join("Logger", "*")
-    # listLoggerPfade = [filename for filename in glob.glob(wcLoggerOrdner)]
     fileList = []
     outputList = []
     if os.path.isdir("Logger"):
@@ -51,6 +49,17 @@ def load_data_to_df(pfad):
     df.columns = getLogItemsList()
 
 
+FP_LISTE = [
+    {"label": "FP 1, vor-zurück", "value": 1},
+    {"label": "FP 2, im Kreis", "value": 2},
+    {"label": "FP 3, US-Testfahrt", "value": 3},
+    {"label": "FP 4, Erkundungsfahrt", "value": 4},
+    {
+        "label": "FP 5, LineFollower",
+        "value": 5,
+    },
+]
+
 kpi_1 = dbc.Card([dbc.CardBody([html.H6("vMax"), html.P(id="kpi1")])])
 kpi_2 = dbc.Card([dbc.CardBody([html.H6("vMin"), html.P(id="kpi2")])])
 kpi_3 = dbc.Card([dbc.CardBody([html.H6("vMean"), html.P(id="kpi3")])])
@@ -60,12 +69,9 @@ kpi_5 = dbc.Card([dbc.CardBody([html.H6("vm"), html.P(id="kpi5")])])
 
 row_joystick = dbc.Row(
     [
-        dbc.Col([html.P("Manuelle Steuerung"), dbc.Switch(id="sw_manual")], width=4),
+        dbc.Col([html.P("Manuell on/off"), dbc.Switch(id="sw_manual")], width=4),
         dbc.Col(
-            daq.Joystick(
-                id="joystick",
-                size=100,
-            ),
+            daq.Joystick(id="joystick", size=100, className="mb-3"),
             width=4,
         ),
         dbc.Col(
@@ -76,6 +82,159 @@ row_joystick = dbc.Row(
         ),
     ]
 )
+CARD_ManuelleSteuerung = dbc.Card(
+    [
+        dbc.Row(
+            [  # Titel Manuelle Steuerung
+                html.H3(
+                    id="label_test",
+                    children="Manuelle Steuerung",
+                    style={
+                        "textAlign": "left",
+                        "paddingTop": 20,
+                        "paddingBottom": 20,
+                    },
+                )
+            ]
+        ),
+        dbc.Row(
+            [  # Slider Speed
+                dbc.Col([html.H6("max. speed:")], width=4),
+                dbc.Col(
+                    [
+                        dcc.Slider(
+                            min=0,
+                            max=100,
+                            step=10,
+                            id="slider_speed",
+                            value=40,
+                            updatemode="drag",
+                        )
+                    ],
+                    width=8,
+                ),
+            ]
+        ),
+        row_joystick,
+    ],
+    className="card text-white bg-dark mb-3",
+    style="max-width: 20rem;",
+)
+
+COL_Logfiles = [
+    dbc.Row(
+        [
+            html.H2(  # Überschrift
+                id="title_Logfiles",
+                children="Logfiles",
+                style={"textAlign": "center", "paddingBottom": 20},
+            ),
+            dcc.Dropdown(  # Dropdown Logfiles
+                id="dd_Logfiles",
+                placeholder="Bitte Logging-File wählen!",
+                options=getLoggerFiles(),
+                value="0",
+                multi=False,
+                style={"color": "black"},
+            ),
+        ]
+    ),
+    dbc.Row(
+        [
+            dbc.Col([kpi_1], width=4),
+            dbc.Col([kpi_2], width=4),
+            dbc.Col([kpi_3], width=4),
+        ],
+        style={"paddingTop": 20, "paddingBottom": 20},
+    ),
+    dbc.Row(
+        [
+            dbc.Col([kpi_4], width=4),
+            dbc.Col([kpi_5], width=4),
+        ],
+        style={"paddingBottom": 20},
+    ),
+    dbc.Row(
+        [
+            html.H3(id="titel_LogDetails", children="Plot-Line Auswahl"),
+            dcc.Dropdown(  # Dropdown Log-Details
+                id="dd_LogDetails",
+                options=getLogItemsList()[1:],
+                value=getLogItemsList()[1:4],
+                multi=True,
+                style={"color": "black"},
+            ),
+            # dcc.Checklist(
+            #     id="cl_Graph_Lines", options=getLogGraphList(),
+            # ),
+        ],
+        style={"paddingBottom": 10},
+    ),
+]
+COL_Fahrzeugsteuerung = [  # Col Fahrzeugsteuerung
+    dbc.Row(
+        [  # Titel
+            html.H2(
+                id="titel_Fahrzeugsteuerung",
+                children="Fahrzeugsteuerung",
+                style={
+                    "textAlign": "center",
+                    "paddingBottom": 10,
+                },
+            )
+        ]
+    ),
+    dbc.Row(
+        [  # Dropdown Fahrprogramm
+            dcc.Dropdown(
+                id="dd_Fahrprogramm",
+                placeholder="Bitte Fahrprogramm wählen:",
+                options=FP_LISTE,
+                value=0,
+                style={"color": "black"},
+            )
+        ]
+    ),
+    dbc.Row(
+        [  # Buttons
+            dbc.Col(
+                [
+                    dbc.Button(
+                        children="Start Prog",
+                        id="btn_start",
+                        color="dark",
+                        className="me-1",
+                        n_clicks=0,
+                    )
+                ],
+                width=4,
+            ),
+            dbc.Col(
+                [],
+                width=4,
+            ),
+            dbc.Col(
+                [
+                    dbc.Button(
+                        children="STOP",
+                        id="btn_stop",
+                        color="dark",
+                        className="me-1",
+                        n_clicks=0,
+                    )
+                ],
+                width=4,
+            ),
+        ],
+        style={"paddingTop": 20, "paddingBottom": 20},
+        justify="center",
+    ),
+    dbc.Row(
+        [
+            CARD_ManuelleSteuerung,
+        ]
+    ),
+]
 
 
 app = dash.Dash(
@@ -111,171 +270,13 @@ app.layout = dbc.Container(
         dbc.Row(
             [  # Row 2
                 dbc.Col(  # Logfile-Handling
-                    [
-                        dbc.Row(
-                            [
-                                html.H2(  # Überschrift
-                                    id="title_Logfiles",
-                                    children="Logfiles",
-                                    style={"textAlign": "center", "paddingBottom": 20},
-                                ),
-                                dcc.Dropdown(  # Dropdown Logfiles
-                                    id="dd_Logfiles",
-                                    placeholder="Bitte Logging-File wählen!",
-                                    options=getLoggerFiles(),
-                                    value="0",
-                                    multi=False,
-                                    style={"color": "black"},
-                                ),
-                            ]
-                        ),
-                        dbc.Row(
-                            [
-                                dbc.Col([kpi_1], width=4),
-                                dbc.Col([kpi_2], width=4),
-                                dbc.Col([kpi_3], width=4),
-                            ],
-                            style={"paddingTop": 20, "paddingBottom": 20},
-                        ),
-                        dbc.Row(
-                            [
-                                dbc.Col([kpi_4], width=4),
-                                dbc.Col([kpi_5], width=4),
-                            ],
-                            style={"paddingBottom": 20},
-                        ),
-                        dbc.Row(
-                            [
-                                html.H3(
-                                    id="titel_LogDetails", children="Plot-Line Auswahl"
-                                ),
-                                dcc.Dropdown(  # Dropdown Log-Details
-                                    id="dd_LogDetails",
-                                    options=getLogItemsList()[1:],
-                                    value=getLogItemsList()[1:4],
-                                    multi=True,
-                                    style={"color": "black"},
-                                ),
-                                # dcc.Checklist(
-                                #     id="cl_Graph_Lines", options=getLogGraphList(),
-                                # ),
-                            ],
-                            style={"paddingBottom": 10},
-                        ),
-                    ],
+                    COL_Logfiles,
                     width=5,
                     # style={"backgroundColor": "darkgrey"},
                 ),
-                dbc.Col([], width=2),  # Col Fahrzeugsteuerung
+                dbc.Col([], width=2),  # Col Space
                 dbc.Col(
-                    [  # Col Fahrzeugsteuerung
-                        dbc.Row(
-                            [  # Titel
-                                html.H2(
-                                    id="titel_Fahrzeugsteuerung",
-                                    children="Fahrzeugsteuerung",
-                                    style={
-                                        "textAlign": "center",
-                                        "paddingBottom": 20,
-                                    },
-                                )
-                            ]
-                        ),
-                        dbc.Row(
-                            [  # Dropdown Fahrprogramm
-                                dcc.Dropdown(
-                                    id="dd_Fahrprogramm",
-                                    placeholder="Bitte Fahrprogramm wählen:",
-                                    options=[
-                                        {"label": "FP 1, vor-zurück", "value": 1},
-                                        {"label": "FP 2, im Kreis", "value": 2},
-                                        {"label": "FP 3, US-Testfahrt", "value": 3},
-                                        {"label": "FP 4, LineFollower", "value": 4},
-                                        {
-                                            "label": "FP 5: LineFollower",
-                                            "value": 5,
-                                        },
-                                    ],
-                                    value=0,
-                                    style={"color": "black"},
-                                )
-                            ]
-                        ),
-                        dbc.Row(
-                            [  # Buttons
-                                dbc.Col(
-                                    [
-                                        dbc.Button(
-                                            children="Start Prog",
-                                            id="btn_start",
-                                            color="dark",
-                                            className="me-1",
-                                            n_clicks=0,
-                                        )
-                                    ],
-                                    width=4,
-                                ),
-                                dbc.Col(
-                                    [
-                                        dbc.Button(
-                                            children="Pause",
-                                            id="btn_pause",
-                                            color="dark",
-                                            className="me-1",
-                                            n_clicks=0,
-                                        )
-                                    ],
-                                    width=4,
-                                ),
-                                dbc.Col(
-                                    [
-                                        dbc.Button(
-                                            children="STOP",
-                                            id="btn_stop",
-                                            color="dark",
-                                            className="me-1",
-                                            n_clicks=0,
-                                        )
-                                    ],
-                                    width=4,
-                                ),
-                            ],
-                            style={"paddingTop": 20, "paddingBottom": 20},
-                            justify="center",
-                        ),
-                        dbc.Row(  # Slider Speed
-                            [
-                                dbc.Col([html.H3("Speed:")], width=3),
-                                dbc.Col(
-                                    [
-                                        dcc.Slider(
-                                            min=0,
-                                            max=100,
-                                            step=10,
-                                            id="slider_speed",
-                                            value=40,
-                                            updatemode="drag",
-                                        )
-                                    ],
-                                    width=9,
-                                ),
-                            ]
-                        ),
-                        dbc.Row(
-                            [
-                                html.P(
-                                    id="label_test",
-                                    children="Hier steht der Debug-Text",
-                                    style={
-                                        "textAlign": "left",
-                                        "paddingTop": 20,
-                                        "paddingBottom": 20,
-                                    },
-                                )
-                            ]
-                        ),
-                        row_joystick,
-                    ],
+                    COL_Fahrzeugsteuerung,
                     width=5,
                     # style={"backgroundColor": "darkgrey"},
                 ),
@@ -306,11 +307,13 @@ app.layout = dbc.Container(
 
 # @app.callback(
 #     Output("dummy2", "children"),
-#     Input("interval_startup", "n_intervals"),
+#     Input("sw_manual", "value"),
 # )
-# def load_car(intervals):
-#     global car
-#     car = PiCar.SensorCar()
+# def load_car(value):
+#     if value:
+#         car.logger_start()
+#     else:
+#         car.logger_save()
 #     return 0
 
 
@@ -386,15 +389,15 @@ def update_KPI_DD(logFile):
         return 0, 0, 0, 0, 0
 
 
-@app.callback(
-    Output(component_id="label_test", component_property="children"),
-    Input(component_id="slider_speed", component_property="value"),
-    Input(component_id="dd_Fahrprogramm", component_property="value"),
-)
-def write_label(speed, Fahrprogramm):
-    # fp.updateSpeed(speed)
+# @app.callback(
+#     Output(component_id="label_test", component_property="children"),
+#     Input(component_id="slider_speed", component_property="value"),
+#     Input(component_id="dd_Fahrprogramm", component_property="value"),
+# )
+# def write_label(speed, Fahrprogramm):
+#     # fp.updateSpeed(speed)
 
-    return "Fahrprogramm: " + str(Fahrprogramm) + " Speed: " + str(speed)
+#     return "Fahrprogramm: " + str(Fahrprogramm) + " Speed: " + str(speed)
 
 
 @app.callback(
@@ -427,20 +430,18 @@ def updateFileList(value):
 
 
 @app.callback(
-    Output("dummy", "children"),
+    Output("sw_manual", "value"),
     Input("btn_start", "n_clicks"),
-    Input("btn_pause", "n_clicks"),
     Input("btn_stop", "n_clicks"),
     State("dd_Fahrprogramm", "value"),
     State("slider_speed", "value"),
 )
-def button_action(btn_start, btn_pause, btn_stop, FP, speed):
+def button_action(btn_start, btn_stop, FP, speed):
     changed_id = [p["prop_id"] for p in callback_context.triggered][0]
     if "btn_start" in changed_id:
-        pass
+        car.start_parcours(FP)
     if "btn_stop" in changed_id:
-        pass
-    if "btn_pause" in changed_id:
+        car.stop_parcours()
         pass
     return 0
 

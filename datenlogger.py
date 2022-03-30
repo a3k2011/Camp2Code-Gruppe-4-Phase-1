@@ -39,7 +39,7 @@ class Datenlogger:
 
     def save(self):
         """speichert die uebergebenen Daten"""
-        if self._logger_running:
+        if self._logger_running and (len(self._log_data) > 0):
             self._logger_running = False
             self._log_file["data"] = self._log_data
             self._log_file["ende"] = str(datetime.now()).partition(".")[0]
