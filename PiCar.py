@@ -275,6 +275,7 @@ class SensorCar(Sonic):
         self.ir = basisklassen.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
         self._ir_sensors = [20,20,10,20,20]
+        self._line = True
         self._steering_soll = [0] * filter_deepth
 
 
@@ -294,8 +295,8 @@ class SensorCar(Sonic):
         Returns:
             list: Analogwerte der 5 IR-Sensoren
         """
-        # self._ir_sensors = self.ir.read_analog()
-        self._ir_sensors = self.ir.get_average()
+        #self._ir_sensors = self.ir.read_analog()
+        self._ir_sensors = self.ir.get_average(2)
         return self._ir_sensors
 
     def angle_from_ir(self):
@@ -387,16 +388,22 @@ class SensorCar(Sonic):
                         '2': 'self.steering_angle = 0',
                         '3': 'self.steering_angle = 30',
                         '4': 'self.steering_angle = 40'}
-        while self._active:
+        while self._active and self._line:
             idx_min = str(np.argmin(self._ir_sensors))
-            print(idx_min)
-            std = np.std(self._ir_sensors)
-            print(std)
-            if std < 2.5 and std != 0:
-                self._active = False
             if idx_min in dictActions and self._active:
                     exec(dictActions[idx_min])
                     time.sleep(self.IF_FREQ)
+
+    def lineFunction(self):
+        while self._active:
+            std = np.std(self._ir_sensors)
+            #mean = np.mean(self._ir_sensors)
+            #res = std/mean
+            #print(std)
+            if std < 2.5 and std !=0:
+                self._line = False
+                self._active = False
+            time.sleep(self.IF_FREQ)
 
     def fp5(self, v=50):
         print("Fahrparcour 5 gestartet.")
@@ -404,9 +411,10 @@ class SensorCar(Sonic):
         self.startDriveMode()
         """
         Hier muss eine Reaktions-Funktion zum Worker submitted werden!
-        Bsp: lenkFunctionTim
+        Bsp: lenkFunctionTim / lineFunction
         """
         self._worker.submit(self.lenkFunctionTim)
+        self._worker.submit(self.lineFunction)
         #self._worker.submit(self.inputWorker)
 
         # Starte die Fahrt

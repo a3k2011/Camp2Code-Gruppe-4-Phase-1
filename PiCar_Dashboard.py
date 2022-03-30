@@ -117,8 +117,6 @@ CARD_ManuelleSteuerung = dbc.Card(
         ),
         row_joystick,
     ],
-    className="card text-white bg-dark mb-3",
-    style="max-width: 20rem;",
 )
 
 COL_Logfiles = [
@@ -362,7 +360,7 @@ def computeKPI(data):
     vmax = data["v"].max()
     vmin = data["v"][1:].min()
     vmean = round(data["v"].mean(), 2)
-    duration = data["time"].max()
+    duration = round(data["time"].max(),2)
     route = round(vmean * duration, 2)
     return vmax, vmin, vmean, duration, route
 
