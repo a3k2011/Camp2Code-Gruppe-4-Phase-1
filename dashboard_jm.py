@@ -1,30 +1,33 @@
 import os
-import glob
 import json
 import pandas as pd
-from pandas import read_json
 import time
 import datetime
-import dash
-from dash import dcc
-from dash import html
+from dash import dash, dcc, html, callback_context
 import plotly.express as px
 from dash.dependencies import Input, Output, State
-from dash import callback_context
+import dash_daq as daq
 import dash_bootstrap_components as dbc
-import fahrparcours_jm_test as fp
+import fahrparcours_jm as fp
 
 
 df = None
+car = None
 
 
 def getLoggerFiles():
     # wcLoggerOrdner = os.path.join("Logger", "*")
     # listLoggerPfade = [filename for filename in glob.glob(wcLoggerOrdner)]
     fileList = []
+    outputList = []
     if os.path.isdir("Logger"):
         fileList = os.listdir("Logger")
-    return fileList
+        for file in fileList:
+            if file.partition(".")[2] == "log":
+                outputList.append(file)
+            outputList.sort()
+            outputList.reverse()
+    return outputList
 
 
 def getLogItemsList():
@@ -53,6 +56,15 @@ kpi_2 = dbc.Card([dbc.CardBody([html.H6("vMin"), html.P(id="kpi2")])])
 kpi_3 = dbc.Card([dbc.CardBody([html.H6("vMean"), html.P(id="kpi3")])])
 kpi_4 = dbc.Card([dbc.CardBody([html.H6("time"), html.P(id="kpi4")])])
 kpi_5 = dbc.Card([dbc.CardBody([html.H6("vm"), html.P(id="kpi5")])])
+
+
+row_joystick = dbc.Row(
+    [
+        dbc.Col([html.P("Manuelle Steuerung"), dbc.Switch(id="sw_manual")], width=4),
+        dbc.Col(daq.Joystick(id="joystick", size=100,), width=4),
+        dbc.Col([html.P(id="value_joystick"),], width=4),
+    ]
+)
 
 
 app = dash.Dash(external_stylesheets=[dbc.themes.SUPERHERO])
@@ -93,7 +105,7 @@ app.layout = dbc.Container(
                                     id="dd_Logfiles",
                                     placeholder="Bitte Logging-File wählen!",
                                     options=getLoggerFiles(),
-                                    value=["2"],
+                                    value="0",
                                     multi=False,
                                     style={"color": "black"},
                                 ),
@@ -119,7 +131,7 @@ app.layout = dbc.Container(
                                 dcc.Dropdown(  # Dropdown Log-Details
                                     id="dd_LogDetails",
                                     options=getLogItemsList()[1:],
-                                    value=["2"],
+                                    value=getLogItemsList()[1:4],
                                     multi=True,
                                     style={"color": "black"},
                                 ),
@@ -130,9 +142,10 @@ app.layout = dbc.Container(
                             style={"paddingBottom": 10},
                         ),
                     ],
-                    width=6,
-                    style={"backgroundColor": "darkblue"},
+                    width=5,
+                    # style={"backgroundColor": "darkgrey"},
                 ),
+                dbc.Col([], width=2),  # Col Fahrzeugsteuerung
                 dbc.Col(
                     [  # Col Fahrzeugsteuerung
                         dbc.Row(
@@ -173,7 +186,7 @@ app.layout = dbc.Container(
                                     [
                                         dbc.Button(
                                             children="Pause",
-                                            id="btn_Pause",
+                                            id="btn_pause",
                                             color="dark",
                                             className="me-1",
                                             n_clicks=0,
@@ -185,7 +198,7 @@ app.layout = dbc.Container(
                                     [
                                         dbc.Button(
                                             children="STOP",
-                                            id="btn_STOP",
+                                            id="btn_stop",
                                             color="dark",
                                             className="me-1",
                                             n_clicks=0,
@@ -208,6 +221,7 @@ app.layout = dbc.Container(
                                             step=10,
                                             id="slider_speed",
                                             value=40,
+                                            updatemode="drag",
                                         )
                                     ],
                                     width=9,
@@ -227,9 +241,10 @@ app.layout = dbc.Container(
                                 )
                             ]
                         ),
+                        row_joystick,
                     ],
-                    width=6,
-                    style={"backgroundColor": "darkred"},
+                    width=5,
+                    # style={"backgroundColor": "darkgrey"},
                 ),
             ],
             justify="center",
@@ -242,6 +257,9 @@ app.layout = dbc.Container(
                     children="hier das Copyright ;)",
                     style={"textAlign": "right"},
                 ),
+                html.Div(id="dummy"),
+                dcc.Interval(id="intervall_10s", interval=10000),
+                dcc.Interval(id="interval_startup", max_intervals=1,),
             ],
             style={"paddingTop": 10, "paddingBottom": 10},
         ),  # Row 3
@@ -249,13 +267,63 @@ app.layout = dbc.Container(
 )
 
 
+@app.callback(
+    Output("dummy", "children"), Input("interval_startup", "n_intervals"),
+)
+def load_car():
+    global car
+    car = fp.PiCar.SensorCar()
+    return 0
+
+
+@app.callback(
+    Output("value_joystick", "children"),
+    Input("joystick", "angle"),
+    Input("joystick", "force"),
+    State("sw_manual", "value"),
+    State("slider_speed", "value"),
+)
+def joystick_values(angle, force, switch, max_Speed):
+    global car
+    debug = ""
+    if angle != None and force != None:
+        if switch:
+            power = round(force, 1)
+            winkel = 0
+            dir = 0
+            if power == 0:
+                winkel = 0
+                dir = 0
+            else:
+                power = power * max_Speed
+                if power > max_Speed:
+                    power = max_Speed
+                if angle <= 180:
+                    dir = 1
+                    winkel = round(45 - (angle / 2), 0)
+                else:
+                    dir = -1
+                    winkel = round(((angle - 180) / 2) - 45, 0)
+                car.drive(power, dir)
+                car.steering_angel = winkel
+                debug = f"Angle: {winkel} speed: {power} dir: {dir}"
+        else:
+            debug = "Man. mode off"
+            car.drive(0, 0)
+            car.steering_angel = 0
+    else:
+        debug = "None-Value"
+    return debug
+
+
 def computeKPI(data):
     vmax = data["v"].max()
     vmin = data["v"][1:].min()
     vmean = round(data["v"].mean(), 2)
-    time = data.iloc[-1].name
-    route = round(vmean * time, 2)
-    return vmax, vmin, vmean, time, route
+    duration = data.iloc[-1].name
+    route = round(vmean * duration, 2)
+    duration = data["time"].max()
+    return vmax, vmin, vmean, duration, route
 
 
 @app.callback(
@@ -268,22 +336,27 @@ def computeKPI(data):
 )
 def update_KPI_DD(logFile):
     # fahrAttr = [{"label": ddLabels[key], "value": key} for key in df.keys()]
+    global df
+    time.sleep(1)
+    # if df != None:
+    #   df = pd.read_json(os.path.join("Logger", logFile))
+    #   df.columns = getLogItemsList()
     try:
-        df = pd.read_json(os.path.join("Logger", logFile))
-        df.columns = getLogItemsList()
+        vmax, vmin, vmean, duration, route = computeKPI(df)
+        return vmax, vmin, vmean, duration, route
     except:
         return 0, 0, 0, 0, 0
-    else:
-        vmax, vmin, vmean, time, route = computeKPI(df)
-        return vmax, vmin, vmean, time, route
 
 
 @app.callback(
     Output(component_id="label_test", component_property="children"),
+    Input(component_id="slider_speed", component_property="value"),
     Input(component_id="dd_Fahrprogramm", component_property="value"),
 )
-def write_label(value):
-    return value
+def write_label(speed, Fahrprogramm):
+    fp.updateSpeed(speed)
+
+    return "Fahrprogramm: " + str(Fahrprogramm) + " Speed: " + str(speed)
 
 
 @app.callback(
@@ -292,14 +365,45 @@ def write_label(value):
     Input("dd_LogDetails", "value"),
 )
 def selectedLog(logFile, logDetails):
-    df = pd.read_json(os.path.join("Logger", logFile))
-    time.sleep(0.1)
-    df.columns = getLogItemsList()
-    if logDetails != []:
-        fig = px.line(df, x="time", y=logDetails)
+    global df
+    if logFile != "0":
+        load_data_to_df(logFile)
+        # df = pd.read_json(os.path.join("Logger", logFile))
+        # time.sleep(0.1)
+        # df.columns = getLogItemsList()
+        if logDetails != []:
+            fig = px.line(df, x="time", y=logDetails, title=logFile)
+        else:
+            fig = px.line(df, x="time", y="st_angle", title=logFile)
+        return fig
     else:
-        fig = px.line(df, x="time", y="st_angle")
-    return fig
+        return px.line()
+
+
+@app.callback(
+    Output("dd_Logfiles", "options"), Input("intervall_10s", "n_intervals"),
+)
+def updateFileList(value):
+    return getLoggerFiles()
+
+
+@app.callback(
+    Output("dummy", "children"),
+    Input("btn_start", "n_clicks"),
+    Input("btn_pause", "n_clicks"),
+    Input("btn_stop", "n_clicks"),
+    State("dd_Fahrprogramm", "value"),
+    State("slider_speed", "value"),
+)
+def button_action(btn_start, btn_pause, btn_stop, FP, speed):
+    changed_id = [p["prop_id"] for p in callback_context.triggered][0]
+    if "btn_start" in changed_id:
+        fp.drive_sim(FP, speed)
+    if "btn_stop" in changed_id:
+        fp.drive_stop()
+    if "btn_pause" in changed_id:
+        pass
+    return 0
 
 
 if __name__ == "__main__":

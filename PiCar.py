@@ -119,15 +119,35 @@ class SensorCar(Sonic):
         Returns:
             list: Analogwerte der 5 IR-Sensoren
         """
-        self._ir_sensors = self.ir.read_analog()
+        # self._ir_sensors = self.ir.read_analog()
+        self._ir_sensors = self.ir.get_average()
         return self._ir_sensors
 
     def angle_from_ir(self):
         """berechnet den Soll-Lenkeinschlag damit das Fahrzeug der Linie folgen kann
-
+        
         Returns:
             int: Soll-Lenkeinschlag (100 bedeutet STOP)
         """
+        # Lookup-Table für mögliche Sensor-Werte
+        angle_from_sensor = {
+            0: 100,
+            1: 45,
+            3: 30,
+            2: 20,
+            7: 20,
+            6: 10,
+            4: 0,
+            14: 0,
+            12: -10,
+            8: -20,
+            28: -20,
+            24: -30,
+            16: -45,
+            31: 100,
+        }
+        lookup = np.array([1, 2, 4, 8, 16])
+
         ir_data = self.ir_sensor_analog
         sd = [0, 0, 0, 0, 0]
         ir_result = 0

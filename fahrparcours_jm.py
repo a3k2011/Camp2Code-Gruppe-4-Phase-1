@@ -177,6 +177,16 @@ def fahrparcour(car: PiCar.SensorCar, pos):
         print("Fahrparcours", pos, "nicht bekannt!")
 
 
+def getParcoursList():
+    return [
+        {"label": "FP 1, vor-zurück", "value": 1},
+        {"label": "FP 2, im Kreis", "value": 2},
+        {"label": "FP 3, US-Testfahrt", "value": 3},
+        {"label": "FP 4, LineFollower", "value": 4},
+        {"label": "FP 5: LineFollower", "value": 5,},
+    ]
+
+
 def main():
     myCar = PiCar.SensorCar(filter_deepth=4)
     myCar.stop()
