@@ -8,7 +8,7 @@ import plotly.express as px
 from dash.dependencies import Input, Output, State
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-import PiCar_work as PiCar
+import PiCar
 
 
 df = None
