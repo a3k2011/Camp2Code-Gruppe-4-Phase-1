@@ -8,11 +8,11 @@ import plotly.express as px
 from dash.dependencies import Input, Output, State
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-import PiCar
+import PiCar_work as PiCar
 
 
 df = None
-car = None
+car = PiCar.SensorCar()
 
 
 def getLoggerFiles():
@@ -304,14 +304,14 @@ app.layout = dbc.Container(
 )
 
 
-@app.callback(
-    Output("dummy2", "children"),
-    Input("interval_startup", "n_intervals"),
-)
-def load_car(intervals):
-    global car
-    car = PiCar.SensorCar()
-    return 0
+# @app.callback(
+#     Output("dummy2", "children"),
+#     Input("interval_startup", "n_intervals"),
+# )
+# def load_car(intervals):
+#     global car
+#     car = PiCar.SensorCar()
+#     return 0
 
 
 @app.callback(
@@ -322,16 +322,17 @@ def load_car(intervals):
     State("slider_speed", "value"),
 )
 def joystick_values(angle, force, switch, max_Speed):
-    global car
     debug = ""
     if angle != None and force != None:
         if switch:
             power = round(force, 1)
             winkel = 0
             dir = 0
-            if power == 0:
+            if force == 0:
                 winkel = 0
                 dir = 0
+                car.drive(0, 0)
+                car.steering_angle = 0
             else:
                 power = power * max_Speed
                 if power > max_Speed:
@@ -343,12 +344,12 @@ def joystick_values(angle, force, switch, max_Speed):
                     dir = -1
                     winkel = round(((angle - 180) / 2) - 45, 0)
                 car.drive(int(power), dir)
-                car.steering_angel = winkel
+                car.steering_angle = winkel
                 debug = f"Angle: {winkel} speed: {power} dir: {dir}"
         else:
             debug = "Man. mode off"
             car.drive(0, 0)
-            car.steering_angel = 0
+            car.steering_angle = 0
     else:
         debug = "None-Value"
     return debug
@@ -358,9 +359,8 @@ def computeKPI(data):
     vmax = data["v"].max()
     vmin = data["v"][1:].min()
     vmean = round(data["v"].mean(), 2)
-    duration = data.iloc[-1].name
-    route = round(vmean * duration, 2)
     duration = data["time"].max()
+    route = round(vmean * duration, 2)
     return vmax, vmin, vmean, duration, route
 
 
