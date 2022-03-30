@@ -6,13 +6,33 @@ import datenlogger
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
+
+angle_from_sensor = {
+    0: 100,
+    1: -40,
+    3: -32,
+    2: -23,
+    7: -23,
+    6: -10,
+    4: 0,
+    14: 0,
+    12: 10,
+    8: 23,
+    28: 23,
+    24: 32,
+    16: 40,
+    31: 100,
+}
+lookup = np.array([1, 2, 4, 8, 16])
+
+
 STEERINGE_ANGLE_MAX = 45
 
 
 class BaseCar:
 
     LOG_FREQ = 0.1
-    
+
     def __init__(self):
         self._steering_angle = 0
         self._speed = 0
@@ -130,13 +150,13 @@ class BaseCar:
         # Starte Drive Mode
         self.startDriveMode()
 
-        for sa in [(-STEERINGE_ANGLE_MAX+5), (STEERINGE_ANGLE_MAX-5)]:
+        for sa in [(-STEERINGE_ANGLE_MAX + 5), (STEERINGE_ANGLE_MAX - 5)]:
             # Vorwaerts 1sec gerade
             self.steering_angle = 0
             self.drive(v, 1)
             time.sleep(1)
 
-            # Vorwaerts 8sec Max Lenkwinkel 
+            # Vorwaerts 8sec Max Lenkwinkel
             self.steering_angle = sa
             time.sleep(8)
 
@@ -164,7 +184,7 @@ class Sonic(BaseCar):
     def __init__(self):
         super().__init__()
         self.us = basisklassen.Ultrasonic()
-        self._distance = self.US_OFFSET+1
+        self._distance = self.US_OFFSET + 1
         self._hindernis = False
         self._tmpspeed = None
 
@@ -174,7 +194,7 @@ class Sonic(BaseCar):
 
     def usWorker(self):
         while self._active:
-            if self._hindernis == False and not (self.distance-self.US_OFFSET) > 0:
+            if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
                 self._hindernis = True
             else:
                 time.sleep(self.US_FREQ)
@@ -182,11 +202,15 @@ class Sonic(BaseCar):
     def inputWorker(self):
         while self._active:
             inpUser = input("Fahrbefehl eingeben: ")
-            dictBefehle = {'f': 'self.direction = 1', 'b': 'self.direction = -1', 'e': 'self._active = False'}
+            dictBefehle = {
+                "f": "self.direction = 1",
+                "b": "self.direction = -1",
+                "e": "self._active = False",
+            }
             try:
                 if inpUser in dictBefehle:
                     exec(dictBefehle[inpUser])
-                elif type(int(inpUser)) and int(inpUser) >=0 and int(inpUser) <= 100:
+                elif type(int(inpUser)) and int(inpUser) >= 0 and int(inpUser) <= 100:
                     self.speed = int(inpUser)
                     self._tmpspeed = int(inpUser)
                 else:
@@ -199,11 +223,11 @@ class Sonic(BaseCar):
         while self._active:
             if self._hindernis:
 
-                self.drive(50,-1)
+                self.drive(50, -1)
                 self.steering_angle = -40
 
                 cntTime = time.perf_counter()
-                while (time.perf_counter()-cntTime) < 2.55:
+                while (time.perf_counter() - cntTime) < 2.55:
                     time.sleep(0.1)
 
                 self.steering_angle = 0
@@ -214,7 +238,7 @@ class Sonic(BaseCar):
     @property
     def distance(self):
         dist = self.us.distance()
-        self._distance = dist if dist >= 0 else (self.US_OFFSET+1)
+        self._distance = dist if dist >= 0 else (self.US_OFFSET + 1)
         return self._distance
 
     @property
@@ -224,14 +248,14 @@ class Sonic(BaseCar):
     def usstop(self):
         self.us.stop()
 
-    def fp3(self,v=50):
+    def fp3(self, v=50):
         print("Fahrparcour 3 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
 
         # Starte die Fahrt
         self.steering_angle = 0
-        self.drive(v,1)
+        self.drive(v, 1)
         while self._active and not self._hindernis:
             time.sleep(0.1)
 
@@ -250,7 +274,7 @@ class Sonic(BaseCar):
 
         # Starte die Fahrt
         self.steering_angle = 0
-        self.drive(v,1)
+        self.drive(v, 1)
 
         # Wartet auf Fertigstellung aller Threads
         self.endDriveMode(waitingWorker=True)
@@ -258,7 +282,6 @@ class Sonic(BaseCar):
         # Ende Drive Mode
         self.usstop()
         print("Fahrparcour 4 beendet.")
-
 
 
 class SensorCar(Sonic):
@@ -274,10 +297,9 @@ class SensorCar(Sonic):
         super().__init__()
         self.ir = basisklassen.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
-        self._ir_sensors = [20,20,10,20,20]
+        self._ir_sensors = [20, 20, 10, 20, 20]
         self._line = True
         self._steering_soll = [0] * filter_deepth
-
 
     def startDriveMode(self):
         super().startDriveMode()
@@ -295,75 +317,9 @@ class SensorCar(Sonic):
         Returns:
             list: Analogwerte der 5 IR-Sensoren
         """
-        #self._ir_sensors = self.ir.read_analog()
+        # self._ir_sensors = self.ir.read_analog()
         self._ir_sensors = self.ir.get_average(2)
         return self._ir_sensors
-
-    def angle_from_ir(self):
-        """berechnet den Soll-Lenkeinschlag damit das Fahrzeug der Linie folgen kann
-        
-        Returns:
-            int: Soll-Lenkeinschlag (100 bedeutet STOP)
-        """
-        # Lookup-Table für mögliche Sensor-Werte
-        angle_from_sensor = {
-            0: 100,
-            1: 45,
-            3: 30,
-            2: 20,
-            7: 20,
-            6: 10,
-            4: 0,
-            14: 0,
-            12: -10,
-            8: -20,
-            28: -20,
-            24: -30,
-            16: -45,
-            31: 100,
-        }
-        lookup = np.array([1, 2, 4, 8, 16])
-
-        ir_data = self.ir_sensor_analog
-        sd = [0, 0, 0, 0, 0]
-        ir_result = 0
-        for i in range(5):
-            if ir_data[i] < (0.6 * np.max(ir_data)):
-                sd[i] = 1
-            else:
-                sd[i] = 0
-        if np.mean(ir_data) < 15:  # alles dunkel,
-            ir_result = 100  # stopp-Bedingung
-        else:
-            if np.sum(sd) == 5:  # alle low -> nicht möglich
-                ir_result = 100
-            elif np.sum(sd) == 0:
-                ir_result = 100
-            else:
-                if sd[4]:  # stark nach links
-                    ir_result = 40
-                if sd[4] and sd[3]:  # viel nach links
-                    ir_result = 30
-                if sd[3]:  # etwas nach links
-                    ir_result = 20
-                if sd[3] and sd[2]:  # etwas nach links
-                    ir_result = 10
-                if sd[0]:  # stark nach rechts
-                    ir_result = -40
-                if sd[0] and sd[1]:  #
-                    ir_result = -30
-                if sd[1]:  # etwas nach links
-                    ir_result = -20
-                if sd[1] and sd[2]:  # etwas nach links
-                    ir_result = -10
-
-        if ir_result < 100:
-            self._steering_soll = self._steering_soll[1:]
-            self._steering_soll.append(ir_result)
-            ir_out = np.mean(self._steering_soll)
-        else:
-            ir_out = 100
-        return ir_out
 
     @property
     def drive_data(self):
@@ -377,32 +333,43 @@ class SensorCar(Sonic):
             self._direction,
             self._steering_angle,
             self._distance,
-        ] 
+        ]
         data += self._ir_sensors
 
         return data
 
-    def lenkFunctionTim(self):
-        dictActions = {'0': 'self.steering_angle = -40',
-                        '1': 'self.steering_angle = -30',
-                        '2': 'self.steering_angle = 0',
-                        '3': 'self.steering_angle = 30',
-                        '4': 'self.steering_angle = 40'}
-        while self._active and self._line:
-            idx_min = str(np.argmin(self._ir_sensors))
-            if idx_min in dictActions and self._active:
-                    exec(dictActions[idx_min])
-                    time.sleep(self.IF_FREQ)
+    def lenkFunction(self):
+        ir_data = np.array(self._ir_sensors)
+        compValue = 0.6 * ir_data.max()
+        sensor_digital = np.where(ir_data < compValue, 1, 0)
+        lookupValue = (lookup * sensor_digital).sum()
+        ir_result = angle_from_sensor.get(lookupValue)
+        if ir_result != None:
+            if ir_result < 100:
+                self._steering_soll = self._steering_soll[1:]
+                self._steering_soll.append(ir_result)
+                ir_out = np.mean(self._steering_soll)
+                self.steering_angle = ir_out
+                self._line = True
+                self._active = True
+            else:
+                ir_out = 100
+                self._line = False
+                self._active = False
+        else:
+            print("IR-Wert unbekannt:", sensor_digital)
+
+        time.sleep(self.IF_FREQ)
 
     def lineFunction(self):
         while self._active:
             std = np.std(self._ir_sensors)
-            #mean = np.mean(self._ir_sensors)
-            #res = std/mean
-            #print(std)
-            if std < 2.5 and std !=0:
-                self._line = False
-                self._active = False
+            # mean = np.mean(self._ir_sensors)
+            # res = std/mean
+            # print(std)
+            # if std < 2.5 and std != 0:
+            #     self._line = False
+            #     self._active = False
             time.sleep(self.IF_FREQ)
 
     def fp5(self, v=50):
@@ -413,13 +380,13 @@ class SensorCar(Sonic):
         Hier muss eine Reaktions-Funktion zum Worker submitted werden!
         Bsp: lenkFunctionTim / lineFunction
         """
-        self._worker.submit(self.lenkFunctionTim)
-        self._worker.submit(self.lineFunction)
-        #self._worker.submit(self.inputWorker)
+        self._worker.submit(self.lenkFunction)
+        self._worker.submit(self.lineFunction)  # in LenkFunction mit implementiert
+        # self._worker.submit(self.inputWorker)
 
         # Starte die Fahrt
         self.steering_angle = 0
-        self.drive(v,1)
+        self.drive(v, 1)
 
         # Wartet auf Fertigstellung aller Threads
         self.endDriveMode(waitingWorker=True)
