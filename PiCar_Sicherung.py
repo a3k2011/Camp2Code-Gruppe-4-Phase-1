@@ -381,33 +381,16 @@ class SensorCar(Sonic):
 
         return data
 
-    def lenkFunctionTim(self):
-        dictActions = {'0': 'self.steering_angle = -40',
-                        '1': 'self.steering_angle = -30',
-                        '2': 'self.steering_angle = 0',
-                        '3': 'self.steering_angle = 30',
-                        '4': 'self.steering_angle = 40'}
-        while self._active:
-            idx_min = str(np.argmin(self._ir_sensors))
-            print(idx_min)
-            std = np.std(self._ir_sensors)
-            print(std)
-            if std < 2.5 and std != 0:
-                self._active = False
-            if idx_min in dictActions and self._active:
-                    exec(dictActions[idx_min])
-                    time.sleep(self.IF_FREQ)
-
     def fp5(self, v=50):
         print("Fahrparcour 5 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
         """
         Hier muss eine Reaktions-Funktion zum Worker submitted werden!
-        Bsp: lenkFunctionTim
         """
-        self._worker.submit(self.lenkFunctionTim)
-        #self._worker.submit(self.inputWorker)
+        # self._worker.submit(XXXX_FUNCTION_XXXX)
+        # self._worker.submit(self.inputWorker)
+        self._tmpspeed = v
 
         # Starte die Fahrt
         self.steering_angle = 0
@@ -417,6 +400,5 @@ class SensorCar(Sonic):
         self.endDriveMode(waitingWorker=True)
 
         # Ende Drive Mode
-        self.steering_angle = 0
         self.usstop()
         print("Fahrparcour 5 beendet.")
