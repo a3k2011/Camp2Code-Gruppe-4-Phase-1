@@ -379,7 +379,7 @@ class SensorCar(Sonic):
         self.startDriveMode()
         """
         Hier muss eine Reaktions-Funktion zum Worker submitted werden!
-        Bsp: lenkFunctionTim / lineFunction
+        Bsp: lenkFunction
         """
         self._worker.submit(self.lenkFunction)
         # self._worker.submit(self.inputWorker)
