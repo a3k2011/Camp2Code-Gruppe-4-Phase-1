@@ -8,7 +8,7 @@ import plotly.express as px
 from dash.dependencies import Input, Output, State
 import dash_daq as daq
 import dash_bootstrap_components as dbc
-import fahrparcours_jm as fp
+import PiCar
 
 
 df = None
@@ -61,13 +61,31 @@ kpi_5 = dbc.Card([dbc.CardBody([html.H6("vm"), html.P(id="kpi5")])])
 row_joystick = dbc.Row(
     [
         dbc.Col([html.P("Manuelle Steuerung"), dbc.Switch(id="sw_manual")], width=4),
-        dbc.Col(daq.Joystick(id="joystick", size=100,), width=4),
-        dbc.Col([html.P(id="value_joystick"),], width=4),
+        dbc.Col(
+            daq.Joystick(
+                id="joystick",
+                size=100,
+            ),
+            width=4,
+        ),
+        dbc.Col(
+            [
+                html.P(id="value_joystick"),
+            ],
+            width=4,
+        ),
     ]
 )
 
 
-app = dash.Dash(external_stylesheets=[dbc.themes.SUPERHERO])
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.SUPERHERO],
+    meta_tags=[
+        {"name": "viewport"},
+        {"content": "width = device,width, initial-scale=1.0"},
+    ],
+)
 
 app.layout = dbc.Container(
     [
@@ -120,7 +138,10 @@ app.layout = dbc.Container(
                             style={"paddingTop": 20, "paddingBottom": 20},
                         ),
                         dbc.Row(
-                            [dbc.Col([kpi_4], width=4), dbc.Col([kpi_5], width=4),],
+                            [
+                                dbc.Col([kpi_4], width=4),
+                                dbc.Col([kpi_5], width=4),
+                            ],
                             style={"paddingBottom": 20},
                         ),
                         dbc.Row(
@@ -153,7 +174,10 @@ app.layout = dbc.Container(
                                 html.H2(
                                     id="titel_Fahrzeugsteuerung",
                                     children="Fahrzeugsteuerung",
-                                    style={"textAlign": "center", "paddingBottom": 20,},
+                                    style={
+                                        "textAlign": "center",
+                                        "paddingBottom": 20,
+                                    },
                                 )
                             ]
                         ),
@@ -162,7 +186,16 @@ app.layout = dbc.Container(
                                 dcc.Dropdown(
                                     id="dd_Fahrprogramm",
                                     placeholder="Bitte Fahrprogramm wählen:",
-                                    options=fp.getParcoursList(),
+                                    options=[
+                                        {"label": "FP 1, vor-zurück", "value": 1},
+                                        {"label": "FP 2, im Kreis", "value": 2},
+                                        {"label": "FP 3, US-Testfahrt", "value": 3},
+                                        {"label": "FP 4, LineFollower", "value": 4},
+                                        {
+                                            "label": "FP 5: LineFollower",
+                                            "value": 5,
+                                        },
+                                    ],
                                     value=0,
                                     style={"color": "black"},
                                 )
@@ -258,8 +291,12 @@ app.layout = dbc.Container(
                     style={"textAlign": "right"},
                 ),
                 html.Div(id="dummy"),
+                html.Div(id="dummy2"),
                 dcc.Interval(id="intervall_10s", interval=10000),
-                dcc.Interval(id="interval_startup", max_intervals=1,),
+                dcc.Interval(
+                    id="interval_startup",
+                    max_intervals=1,
+                ),
             ],
             style={"paddingTop": 10, "paddingBottom": 10},
         ),  # Row 3
@@ -268,11 +305,12 @@ app.layout = dbc.Container(
 
 
 @app.callback(
-    Output("dummy", "children"), Input("interval_startup", "n_intervals"),
+    Output("dummy2", "children"),
+    Input("interval_startup", "n_intervals"),
 )
-def load_car():
+def load_car(intervals):
     global car
-    car = fp.PiCar.SensorCar()
+    car = PiCar.SensorCar()
     return 0
 
 
@@ -304,7 +342,7 @@ def joystick_values(angle, force, switch, max_Speed):
                 else:
                     dir = -1
                     winkel = round(((angle - 180) / 2) - 45, 0)
-                car.drive(power, dir)
+                car.drive(int(power), dir)
                 car.steering_angel = winkel
                 debug = f"Angle: {winkel} speed: {power} dir: {dir}"
         else:
@@ -354,7 +392,7 @@ def update_KPI_DD(logFile):
     Input(component_id="dd_Fahrprogramm", component_property="value"),
 )
 def write_label(speed, Fahrprogramm):
-    fp.updateSpeed(speed)
+    # fp.updateSpeed(speed)
 
     return "Fahrprogramm: " + str(Fahrprogramm) + " Speed: " + str(speed)
 
@@ -381,7 +419,8 @@ def selectedLog(logFile, logDetails):
 
 
 @app.callback(
-    Output("dd_Logfiles", "options"), Input("intervall_10s", "n_intervals"),
+    Output("dd_Logfiles", "options"),
+    Input("intervall_10s", "n_intervals"),
 )
 def updateFileList(value):
     return getLoggerFiles()
@@ -398,9 +437,9 @@ def updateFileList(value):
 def button_action(btn_start, btn_pause, btn_stop, FP, speed):
     changed_id = [p["prop_id"] for p in callback_context.triggered][0]
     if "btn_start" in changed_id:
-        fp.drive_sim(FP, speed)
+        pass
     if "btn_stop" in changed_id:
-        fp.drive_stop()
+        pass
     if "btn_pause" in changed_id:
         pass
     return 0
