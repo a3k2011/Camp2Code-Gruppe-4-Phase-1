@@ -5,6 +5,8 @@ def main():
     #myCar = PiCar.Sonic()
     myCar = PiCar.SensorCar()
 
+    #myCar.test_ir()
+
     #myCar.fp1(50)
 
     #myCar.fp2(50)
@@ -14,6 +16,7 @@ def main():
     #myCar.fp4(75)
 
     myCar.fp5(50)
+
 
 if __name__ == "__main__":
     main()

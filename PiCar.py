@@ -317,8 +317,8 @@ class SensorCar(Sonic):
         Returns:
             list: Analogwerte der 5 IR-Sensoren
         """
-        # self._ir_sensors = self.ir.read_analog()
-        self._ir_sensors = self.ir.get_average(2)
+        self._ir_sensors = self.ir.read_analog()
+        # self._ir_sensors = self.ir.get_average(2)
         return self._ir_sensors
 
     @property
@@ -339,37 +339,38 @@ class SensorCar(Sonic):
         return data
 
     def lenkFunction(self):
-        ir_data = np.array(self._ir_sensors)
-        compValue = 0.6 * ir_data.max()
-        sensor_digital = np.where(ir_data < compValue, 1, 0)
-        lookupValue = (lookup * sensor_digital).sum()
-        ir_result = angle_from_sensor.get(lookupValue)
-        if ir_result != None:
-            if ir_result < 100:
-                self._steering_soll = self._steering_soll[1:]
-                self._steering_soll.append(ir_result)
-                ir_out = np.mean(self._steering_soll)
-                self.steering_angle = ir_out
-                self._line = True
-                self._active = True
+        while self._active:
+            ir_data = np.array(self._ir_sensors)
+            print(ir_data)
+            compValue = 0.6 * ir_data.max()
+            print(compValue)
+            sensor_digital = np.where(ir_data < compValue, 1, 0)
+            print(sensor_digital)
+            lookupValue = (lookup * sensor_digital).sum()
+            print(lookupValue)
+            ir_result = angle_from_sensor.get(lookupValue)
+            if ir_result != None:
+                print(ir_result)
+                if ir_result < 100:
+                    self._steering_soll = self._steering_soll[1:]
+                    self._steering_soll.append(ir_result)
+                    ir_out = np.mean(self._steering_soll)
+                    self.steering_angle = ir_out
+                else:
+                    ir_out = 100
+                    self._line = False
+                    self._active = False
             else:
-                ir_out = 100
-                self._line = False
-                self._active = False
-        else:
-            print("IR-Wert unbekannt:", sensor_digital)
+                print("IR-Wert unbekannt:", sensor_digital)
 
-        time.sleep(self.IF_FREQ)
+            time.sleep(self.IF_FREQ)
 
     def lineFunction(self):
         while self._active:
             std = np.std(self._ir_sensors)
-            # mean = np.mean(self._ir_sensors)
-            # res = std/mean
-            # print(std)
-            # if std < 2.5 and std != 0:
-            #     self._line = False
-            #     self._active = False
+            if std < 2.5 and std != 0:
+                self._line = False
+                self._active = False
             time.sleep(self.IF_FREQ)
 
     def fp5(self, v=50):
@@ -381,7 +382,6 @@ class SensorCar(Sonic):
         Bsp: lenkFunctionTim / lineFunction
         """
         self._worker.submit(self.lenkFunction)
-        self._worker.submit(self.lineFunction)  # in LenkFunction mit implementiert
         # self._worker.submit(self.inputWorker)
 
         # Starte die Fahrt
@@ -395,3 +395,8 @@ class SensorCar(Sonic):
         self.steering_angle = 0
         self.usstop()
         print("Fahrparcour 5 beendet.")
+
+    def test_ir(self):
+        for i in range(5):
+            print(self._ir_sensor_analog)
+            time.sleep(self.IF_FREQ)
