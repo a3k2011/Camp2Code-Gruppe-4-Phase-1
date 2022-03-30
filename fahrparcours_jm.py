@@ -1,12 +1,8 @@
 from curses.ascii import isdigit
-from socket import IPPROTO_UDP
-
-import PiCar
+import PiCar_work as PiCar
 import time
 import sys
 import numpy as np
-import pprint
-import queue
 
 
 def driveCar(car, speed, direction, angle, duration):
@@ -166,9 +162,9 @@ def fahrparcour(car: PiCar.SensorCar, pos):
         car.stop()
         input("Taste für start")
         i = 0
-        while i < 20:
-            car.drive_data
-
+        while i < 100:
+            a = car.drive_data
+            print("IR-Sensors:", a[-5:])
             time.sleep(0.1)
             i += 1
         print()
@@ -183,7 +179,10 @@ def getParcoursList():
         {"label": "FP 2, im Kreis", "value": 2},
         {"label": "FP 3, US-Testfahrt", "value": 3},
         {"label": "FP 4, LineFollower", "value": 4},
-        {"label": "FP 5: LineFollower", "value": 5,},
+        {
+            "label": "FP 5: LineFollower",
+            "value": 5,
+        },
     ]
 
 
