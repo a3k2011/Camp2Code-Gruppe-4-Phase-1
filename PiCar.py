@@ -53,6 +53,7 @@ class BaseCar:
 
     def startDriveMode(self):
         self._active = True
+        self.steering_angle = 0
         self._dl = datenlogger.Datenlogger(log_file_path=self._log_file_path)
         self._worker = ThreadPoolExecutor(max_workers=5)
         self._worker.submit(self.dlWorker)
@@ -63,6 +64,7 @@ class BaseCar:
         else:
             self._worker.shutdown(wait=False)
         self._active = False
+        self.steering_angle = 0
         self.stop()
 
     def dlWorker(self):
@@ -179,7 +181,7 @@ class BaseCar:
 class Sonic(BaseCar):
 
     US_FREQ = 0.05
-    US_OFFSET = 25
+    US_OFFSET = 20
 
     def __init__(self):
         super().__init__()
@@ -191,6 +193,7 @@ class Sonic(BaseCar):
     def startDriveMode(self):
         super().startDriveMode()
         self._worker.submit(self.usWorker)
+        self._hindernis = False
 
     def usWorker(self):
         while self._active:
@@ -245,23 +248,18 @@ class Sonic(BaseCar):
     def drive_data(self):
         return [self.speed, self.direction, self.steering_angle, self._distance]
 
-    def usstop(self):
-        self.us.stop()
-
     def fp3(self, v=50):
         print("Fahrparcour 3 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
 
         # Starte die Fahrt
-        self.steering_angle = 0
         self.drive(v, 1)
         while self._active and not self._hindernis:
             time.sleep(0.1)
 
         # Ende Drive Mode
         self.endDriveMode(waitingWorker=False)
-        self.usstop()
         print("Fahrparcour 3 beendet.")
 
     def fp4(self, v=50):
@@ -269,18 +267,16 @@ class Sonic(BaseCar):
         # Starte Drive Mode
         self.startDriveMode()
         self._worker.submit(self.rangierenWorker)
-        self._worker.submit(self.inputWorker)
+        # self._worker.submit(self.inputWorker)
         self._tmpspeed = v
 
         # Starte die Fahrt
-        self.steering_angle = 0
         self.drive(v, 1)
 
         # Wartet auf Fertigstellung aller Threads
         self.endDriveMode(waitingWorker=True)
 
         # Ende Drive Mode
-        self.usstop()
         print("Fahrparcour 4 beendet.")
 
 
@@ -304,6 +300,7 @@ class SensorCar(Sonic):
     def startDriveMode(self):
         super().startDriveMode()
         self._worker.submit(self.ifWorker)
+        self._line = True
 
     def ifWorker(self):
         while self._active:
@@ -341,13 +338,13 @@ class SensorCar(Sonic):
     def lenkFunction(self):
         while self._active:
             ir_data = np.array(self._ir_sensors)
-            print(ir_data)
+            #print(ir_data)
             compValue = 0.6 * ir_data.max()
-            print(compValue)
+            #print(compValue)
             sensor_digital = np.where(ir_data < compValue, 1, 0)
-            print(sensor_digital)
+            #print(sensor_digital)
             lookupValue = (lookup * sensor_digital).sum()
-            print(lookupValue)
+            #print(lookupValue)
             ir_result = angle_from_sensor.get(lookupValue)
             if ir_result != None:
                 print(ir_result)
@@ -382,18 +379,16 @@ class SensorCar(Sonic):
         Bsp: lenkFunction
         """
         self._worker.submit(self.lenkFunction)
+        # self._worker.submit(self.lineFunction)
         # self._worker.submit(self.inputWorker)
 
         # Starte die Fahrt
-        self.steering_angle = 0
         self.drive(v, 1)
 
         # Wartet auf Fertigstellung aller Threads
         self.endDriveMode(waitingWorker=True)
 
         # Ende Drive Mode
-        self.steering_angle = 0
-        self.usstop()
         print("Fahrparcour 5 beendet.")
 
     def test_ir(self):

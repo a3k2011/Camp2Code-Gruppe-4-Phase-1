@@ -434,13 +434,26 @@ def updateFileList(value):
     State("dd_Fahrprogramm", "value"),
     State("slider_speed", "value"),
 )
-def button_action(btn_start, btn_stop, FP, speed):
+def button_action(btn_start, btn_stop, fp, speed):
     changed_id = [p["prop_id"] for p in callback_context.triggered][0]
     if "btn_start" in changed_id:
-        car.start_parcours(FP)
+        if fp==1:
+            car.fp1(speed)
+        elif fp==2:
+            car.fp2(speed)
+        elif fp==3:
+            car.fp3(speed)
+        elif fp==4:
+            car.fp4(speed)
+        elif fp==5:
+            car.fp5(speed)
+        else:
+            print("Kein gültiger Fahrparcour übergeben!")
+            
     if "btn_stop" in changed_id:
-        car.stop_parcours()
-        pass
+        car._active = False
+        car._worker.shutdown(wait=True)
+        time.sleep(1)
     return 0
 
 
