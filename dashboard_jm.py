@@ -9,10 +9,19 @@ from dash.dependencies import Input, Output, State
 import dash_daq as daq
 import dash_bootstrap_components as dbc
 import PiCar_work as PiCar
+import socket
 
 
 df = None
-car = PiCar.SensorCar(filter_deepth=4)
+car = PiCar.SensorCar(filter_deepth=2)
+
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    socket_ip = s.getsockname()[0]
+    s.close()
+    return socket_ip
 
 
 def getLoggerFiles():
@@ -134,7 +143,6 @@ CARD_ManuelleSteuerung = dbc.Card(
         row_joystick,
     ],
     className="card text-white bg-dark mb-3",
-    style="max-width: 20rem;",
 )
 
 COL_Logfiles = [
@@ -321,18 +329,6 @@ app.layout = dbc.Container(
 )
 
 
-# @app.callback(
-#     Output("dummy2", "children"),
-#     Input("sw_manual", "value"),
-# )
-# def load_car(value):
-#     if value:
-#         car.logger_start()
-#     else:
-#         car.logger_save()
-#     return 0
-
-
 @app.callback(
     Output("value_joystick", "children"),
     Input("joystick", "angle"),
@@ -378,7 +374,7 @@ def computeKPI(data):
     vmax = data["v"].max()
     vmin = data["v"][1:].min()
     vmean = round(data["v"].mean(), 2)
-    duration = data["time"].max()
+    duration = round(data["time"].max(), 2)
     route = round(vmean * duration, 2)
     return vmax, vmin, vmean, duration, route
 
@@ -394,7 +390,7 @@ def computeKPI(data):
 def update_KPI_DD(logFile):
     # fahrAttr = [{"label": ddLabels[key], "value": key} for key in df.keys()]
     global df
-    time.sleep(1)
+    time.sleep(0.2)
     # if df != None:
     #   df = pd.read_json(os.path.join("Logger", logFile))
     #   df.columns = getLogItemsList()
@@ -463,4 +459,4 @@ def button_action(btn_start, btn_stop, FP, speed):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, host=get_ip_address())

@@ -1,9 +1,11 @@
 import basisklassen
-import time
-import json
 import numpy as np
-import datenlogger
 from curses.ascii import isdigit
+
+
+from datetime import datetime
+import os, json, time
+
 
 angle_from_sensor = {
     0: 100,
@@ -24,6 +26,66 @@ angle_from_sensor = {
 lookup = np.array([1, 2, 4, 8, 16])
 
 STEERINGE_ANGLE_MAX = 45
+IR_MARK = 0.7
+
+
+class Datenlogger:
+    """Datenlogger Klasse
+    speichert übergebene Tupels oder Listen mit Angabe des Zeitdeltas seid Start der Aufzeichnung in ein json-File
+    """
+
+    def __init__(self, log_file_path=None):
+        """Zielverzeichnis fuer Logfiles kann beim Init mit uebergeben werden
+            Wenn der Ordner nicht existiert wird er erzeugt
+
+        Args:
+            log_file_path (_type_, optional): Angabe des Zielordners. Defaults to None.
+        """
+        self._log_file = {}
+        self._log_data = []
+        self._start_timestamp = 0
+        self._logger_running = False
+        self._log_file_path = log_file_path
+
+    def start(self):
+        """starten des Loggers"""
+        print("Logger gestartet")
+        self._logger_running = True
+        self._start_timestamp = time.time()
+        self._log_file["start"] = str(datetime.now()).partition(".")[0]
+
+    def append(self, data):
+        """Daten an den Logger senden
+
+        Args:
+            data (list): ein Element (Liste) wird an den Logger uebergeben
+        """
+        if self._logger_running:
+            ts = round((time.time() - self._start_timestamp), 2)
+            self._log_data.append([ts] + data)
+
+    def save(self):
+        """speichert die uebergebenen Daten"""
+        if self._logger_running and (len(self._log_data) > 0):
+            self._logger_running = False
+            self._log_file["data"] = self._log_data
+            self._log_file["ende"] = str(datetime.now()).partition(".")[0]
+            filename = self._log_file.get("start").partition(".")[0]
+            filename = (
+                filename.replace("-", "").replace(":", "").replace(" ", "_")
+                + "_drive.log"
+            )
+            if self._log_file_path != None:
+                logfile = os.path.join(self._log_file_path, filename)
+                if not os.path.isdir(self._log_file_path):
+                    os.mkdir(self._log_file_path)
+            else:
+                logfile = filename
+            with open(logfile, "w") as f:
+                json.dump(self._log_data, f)
+            self._log_file.clear()
+            self._log_data.clear()
+            print("Log-File saved to:", logfile)
 
 
 def driveCar(car, speed, direction, angle, duration):
@@ -37,13 +99,23 @@ def driveCar(car, speed, direction, angle, duration):
     car.stop()
 
 
+fp_allowed = False
+
+
+def fahrparcours_stop():
+    global fp_allowed
+    fp_allowed = False
+
+
 def fahrparcour(car, pos):
+    global fp_allowed
+    fp_allowed = True
     if pos == 1:
         print("Fahrparcours 1 gewaehlt:")
         print("3 Sekunden gerade vor")
         counter = 0
         state = 0
-        while True:
+        while fp_allowed:
             car.drive_data
             if state == 0:
                 counter = 30
@@ -97,24 +169,8 @@ def fahrparcour(car, pos):
         max_time = 200
         drive_time = 0
         distance = car.drive_data[3]
-        while (distance > 20 or distance < 5) and drive_time < max_time:
-            car.steering_angle = 0
-            car.drive(40, 1)
-            time.sleep(0.1)
-            distance = car.drive_data[3]
-            print("Abstand:", distance)
-            drive_time += 1
-        car.stop()
-
-    elif pos == 4:
-        print("Erkundungsfahrt:")
-        max_time = 1000  # 100s
-        drive_time = 0
-
-        for i in range(10):
-            print("Fahrt:", i + 1)
-            distance = car.drive_data[3]
-            while (distance > 25 or distance < 1) and drive_time < max_time:
+        while fp_allowed:
+            while (distance > 20 or distance < 5) and drive_time < max_time:
                 car.steering_angle = 0
                 car.drive(40, 1)
                 time.sleep(0.1)
@@ -122,12 +178,30 @@ def fahrparcour(car, pos):
                 print("Abstand:", distance)
                 drive_time += 1
             car.stop()
-            print("zuruecksetzen")
-            car.steering_angle = 45
-            car.drive(40, -1)
-            time.sleep(2)
-            car.stop()
-            car.steering_angle = 0
+        car.stop()
+
+    elif pos == 4:
+        print("Erkundungsfahrt:")
+        max_time = 1000  # 100s
+        drive_time = 0
+        while fp_allowed:
+            for i in range(10):
+                print("Fahrt:", i + 1)
+                distance = car.drive_data[3]
+                while (distance > 25 or distance < 1) and drive_time < max_time:
+                    car.steering_angle = 0
+                    car.drive(40, 1)
+                    time.sleep(0.1)
+                    distance = car.drive_data[3]
+                    print("Abstand:", distance)
+                    drive_time += 1
+                car.stop()
+                print("zuruecksetzen")
+                car.steering_angle = 45
+                car.drive(40, -1)
+                time.sleep(2)
+                car.stop()
+                car.steering_angle = 0
         car.stop()
 
     elif pos == 5:
@@ -138,7 +212,7 @@ def fahrparcour(car, pos):
         time_period = 0.01
         time_run = 25  # Sekunden
         ignore_stop = 0.25 / time_period
-        while counter_stop < (time_run / time_period):
+        while counter_stop < (time_run / time_period) and fp_allowed:
             if ignore_stop > 0:
                 ignore_stop -= 1
             car_data = car.drive_data
@@ -170,9 +244,9 @@ def fahrparcour(car, pos):
         ignore_stop = 0.25 / time_period
         last_angle = 0
         reverse = 0
-        time_reverse = 0.4  # max. Zeit für Rückwärtsfahrt
+        time_reverse = 0.6  # max. Zeit für Rückwärtsfahrt
         counter_reverse = time_reverse / time_period
-        while counter_stop < (time_run / time_period):
+        while counter_stop < (time_run / time_period) and fp_allowed:
             if ignore_stop > 0:
                 ignore_stop -= 1
             st_angle = car.angle_from_ir()
@@ -196,14 +270,13 @@ def fahrparcour(car, pos):
                     car.steering_angle = st_angle
                     car.drive(speed_soll, 1)
                     last_angle = st_angle
-                    
 
             else:  # Rückwärtsfahrt
                 if counter_reverse > 0:
                     counter_reverse -= 1
                     car.steering_angle = 0 - last_angle
                     car.drive(30, -1)
-                    if st_angle == 0:  # Linie wieder unter Mitte des PiCar
+                    if abs(st_angle) < 40:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
                         reverse = 0
                 else:
@@ -257,7 +330,7 @@ class BaseCar:
 
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
-        self._dl = datenlogger.Datenlogger(log_file_path=self._log_file_path)
+        self._dl = Datenlogger(log_file_path=self._log_file_path)
 
     def logger_start(self):
         self._dl.start()
@@ -275,7 +348,7 @@ class BaseCar:
 
     def stop_parcours(self):
         print("Emergency STOP")
-        self.drive(0, 0)
+        fahrparcours_stop()
 
     @property
     def speed(self):
@@ -306,7 +379,7 @@ class BaseCar:
         if value > STEERINGE_ANGLE_MAX:
             self._steering_angle = STEERINGE_ANGLE_MAX
         elif value < (0 - STEERINGE_ANGLE_MAX):
-            self._steering_angle = STEERINGE_ANGLE_MAX
+            self._steering_angle = 0 - STEERINGE_ANGLE_MAX
         else:
             self._steering_angle = value
         self.fw.turn(90 + self._steering_angle)
@@ -337,7 +410,7 @@ class Sonic(BaseCar):
         self._us_distance = self.us.distance()
         if self._us_distance > 150:  # Wert nicht relevant
             self._us_distance = -5
-        return self.us.distance()
+        return self._us_distance
 
     @property
     def drive_data(self):
@@ -354,7 +427,7 @@ class SensorCar(Sonic):
         SonicCar (_type_): Erbt von der Klasse SonicCar
     """
 
-    def __init__(self, filter_deepth: int = 5):
+    def __init__(self, filter_deepth: int = 2):
         super().__init__()
         self.ir = basisklassen.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
@@ -421,7 +494,7 @@ class SensorCar(Sonic):
         """
         # Lookup-Table für mögliche Sensor-Werte
         ir_data = np.array(self.ir_sensor_analog)
-        compValue = 0.6 * ir_data.max()
+        compValue = IR_MARK * ir_data.max()
         sd = np.where(ir_data < compValue, 1, 0)
         lookupValue = (lookup * sd).sum()
         ir_result = angle_from_sensor.get(lookupValue)
