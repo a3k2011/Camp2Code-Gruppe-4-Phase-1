@@ -6,7 +6,6 @@ from curses.ascii import isdigit
 from datetime import datetime
 import os, json, time
 
-
 angle_from_sensor = {
     0: 100,
     1: -40,
@@ -294,6 +293,7 @@ def fahrparcour(car, pos):
         ignore_stop = 0.25 / time_period
         last_angle = 0
         reverse = 0
+        us_flag = False
         time_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
         us_distance = 150
         counter_reverse = time_reverse / time_period
@@ -302,9 +302,13 @@ def fahrparcour(car, pos):
                 ignore_stop -= 1
             car_data = car.drive_data
             us_distance = car_data[3]
+            if us_flag and us_distance > 25:
+                us_flag = False
+
             st_angle = car.angle_from_ir()
             if not reverse:
-                if us_distance < 20 and us_distance > 0:
+                if us_flag or (us_distance < 15 and us_distance > 0):
+                    us_flag = True
                     car.stop()
                     print("US-Distanz zu gering --> STOP")
                     # break
@@ -382,6 +386,11 @@ def fahrparcour(car, pos):
 
 
 class BaseCar:
+    """Class BaseCar als Basis der Projekts
+    Grundfunktionen Antrieb und Lenkung des PiCar
+    Einbinden des Datenloggers
+    """
+
     def __init__(self):
         self._steering_angle = 0
         self._speed = 0
@@ -394,29 +403,40 @@ class BaseCar:
             self._log_file_path = data.get("log_file_path")
             if self._log_file_path == None:
                 self._log_file_path = "Folder"
-            ir_calib = data.get("ir_calib")
-            if ir_calib != None:
-                self._ir_calib = ir_calib
 
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
         self._dl = Datenlogger(log_file_path=self._log_file_path)
 
     def logger_start(self):
+        """startet die Aufzeichnung des Log-Files"""
         self._dl.start()
 
     def logger_log(self, data):
+        """Fügt der Aufzeichnung des Datenloggers Daten in Form einer Liste an
+
+        Args:
+            data (list): Liste mit Elementen die gelogged werden sollen
+        """
         self._dl.append(data)
 
     def logger_save(self):
+        """speichert die Daten die der Logger empfangen hat"""
         self._dl.save()
 
     def start_parcours(self, number):
+        """Startet einen Fahrparcours
+            Der Datenlogger wird automatisch gestartet und nach Ende des Parcours gespeichert
+
+        Args:
+            number (int): Nummer des Fahrparcours der absolviert werden soll
+        """
         self.logger_start()
         fahrparcour(self, number)
         self.logger_save()
 
     def stop_parcours(self):
+        """Abbroch des aktuell laufenden Fahrparcours"""
         print("Emergency STOP")
         fahrparcours_stop()
 
@@ -455,6 +475,12 @@ class BaseCar:
         self.fw.turn(90 + self._steering_angle)
 
     def drive(self, geschwindigkeit, richtung):
+        """Längs-Steuerung des PiCar
+
+        Args:
+            geschwindigkeit (int): Geschwindigkeit in % (0...100)
+            richtung (int): Fahrtrichtung (1=vor, 0=Stillstand, -1=zurück)
+        """
         self.speed = geschwindigkeit
         self.bw.speed = self.speed
         self.direction = richtung
@@ -469,7 +495,13 @@ class BaseCar:
         self.bw.stop()
 
 
-class Sonic(BaseCar):
+class SonicCar(BaseCar):
+    """Sonic-Car erweitert das BaseCar mit dem Ultraschall-Sensor
+
+    Args:
+        BaseCar (_type_): Erbt von der Klasse BaseCar
+    """
+
     def __init__(self):
         super().__init__()
         self.us = basisklassen.Ultrasonic()
@@ -477,6 +509,11 @@ class Sonic(BaseCar):
 
     @property
     def distance(self):
+        """Der Wert des US-Sensors wird hier auf 150cm limitiert da größere Werte nicht von Bedeutung sind
+        Ist der empfangene Wert > 150cm wird ein Wert von -5 als Fehlerwert zurückgegeben
+        Returns:
+            _type_: _description_
+        """
         self._us_distance = self.us.distance()
         if self._us_distance > 150:  # Wert nicht relevant
             self._us_distance = -5
@@ -484,14 +521,19 @@ class Sonic(BaseCar):
 
     @property
     def drive_data(self):
+        """Rückgabe der Fahr- und Sensordaten
+
+        Returns:
+            list: [Geschwindigkeit, Fahrtrichtung, Lenkwinkel, US-Distanz]
+        """
         return [self.speed, self.direction, self.steering_angle, self.distance]
 
     def usstop(self):
         self.us.stop()
 
 
-class SensorCar(Sonic):
-    """Die Klasse SensorCar fuegt die Funtkion des IR-Sensors zur SonicCar-Klasse hinzu
+class SensorCar(SonicCar):
+    """Die Klasse SensorCar fuegt die Funtkion des IR-Sensors zu SonicCar hinzu
 
     Args:
         SonicCar (_type_): Erbt von der Klasse SonicCar
@@ -525,7 +567,12 @@ class SensorCar(Sonic):
         return self._ir_sensors
 
     def calibrate_ir_sensors(self):
+        """Kalibrierung der einzelnen IR-Sensoren damit die Ergebnise vergleichbar werden
+        Die Kalibrier-Werte werden in der config.json mit abgelegt.
+        """
         while True:
+            print("-" * 13, "IR Sensor Kalibrierung", "-" * 13)
+            print()
             input("Sensoren auf hellem Untergrund platzieren, dann Taste drücken")
             a = self.ir.get_average(100)
             print("Messergebnis:", a)
@@ -553,16 +600,18 @@ class SensorCar(Sonic):
             else:
                 print("Abbruch durch Beutzer")
                 break
-
         print("IR Kalibrierung beendet")
+        print("_" * 50)
+        print()
 
     def angle_from_ir(self):
         """berechnet den Soll-Lenkeinschlag damit das Fahrzeug der Linie folgen kann
 
         Returns:
-            int: Soll-Lenkeinschlag (100 bedeutet STOP)
+            int: Soll-Lenkeinschlag
+            Wert 100: keine Linie erkannt
+            Wert 101: undefinierter Wert
         """
-        # Lookup-Table für mögliche Sensor-Werte
         ir_data = np.array(self.ir_sensor_analog)
         compValue = IR_MARK * ir_data.max()
         sd = np.where(ir_data < compValue, 1, 0)
@@ -581,10 +630,10 @@ class SensorCar(Sonic):
 
     @property
     def drive_data(self):
-        """Ausgabe der Fahrdaten
+        """Rückgabe der Fahr- und Sensordaten
 
         Returns:
-            list: speed, direction, steering_angle, distance, ir_sensors
+            list: [Geschwindigkeit, Fahrtrichtung, Lenkwinkel, US-Distanz, IR-Sensor1 , , , ,IR-Sensor5]
         """
         data = [
             self._speed,
@@ -598,26 +647,23 @@ class SensorCar(Sonic):
 
 
 def main():
+    """Menü für die Solo-Steuerung des PiCar ohne Dash"""
     myCar = SensorCar(filter_deepth=2)
     myCar.stop()
     myCar.steering_angle = 0
     use_logger = False
     while True:
         print("Test des PiCar:")
-        user_in = input(
-            "Sollen die Daten aufgezeichnet werden (j/n/q/) (c für IR Calib)?: "
-        )
+        user_in = input("Sollen die Daten aufgezeichnet werden (j/n/q/)?: ")
         if user_in.lower() == "j":
             use_logger = True
         else:
             use_logger = False
         if user_in.lower() == "q":
             break
-        if user_in == "c":
-            myCar.calibrate_ir_sensors()
-            next
         user_in = input(
             """Fahrparcours Auswahl: 
+                0 = IR-Sensor-Kalibrierung
                 1 = vor / zurueck
                 2 = Kurvenfahrt
                 3 = vor bis Hindernis
@@ -632,11 +678,14 @@ def main():
                 Bitte waehlen: """
         )
         if isdigit(user_in):
-            if use_logger == True:
-                myCar.logger_start()
-            fahrparcour(myCar, int(user_in))
-            myCar.logger_save()
-            print("Parcours beendet")
+            if int(user_in) == 0:
+                myCar.calibrate_ir_sensors()
+            else:
+                if use_logger == True:
+                    myCar.logger_start()
+                fahrparcour(myCar, int(user_in))
+                myCar.logger_save()
+                print("Parcours beendet")
         else:
             if user_in.lower() == "x":
                 pass
