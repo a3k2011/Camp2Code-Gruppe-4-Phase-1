@@ -338,13 +338,9 @@ class SensorCar(Sonic):
     def lenkFunction(self):
         while self._active:
             ir_data = np.array(self._ir_sensors)
-            #print(ir_data)
             compValue = 0.6 * ir_data.max()
-            #print(compValue)
             sensor_digital = np.where(ir_data < compValue, 1, 0)
-            #print(sensor_digital)
             lookupValue = (lookup * sensor_digital).sum()
-            #print(lookupValue)
             ir_result = angle_from_sensor.get(lookupValue)
             if ir_result != None:
                 print(ir_result)
@@ -360,14 +356,6 @@ class SensorCar(Sonic):
             else:
                 print("IR-Wert unbekannt:", sensor_digital)
 
-            time.sleep(self.IF_FREQ)
-
-    def lineFunction(self):
-        while self._active:
-            std = np.std(self._ir_sensors)
-            if std < 2.5 and std != 0:
-                self._line = False
-                self._active = False
             time.sleep(self.IF_FREQ)
 
     def fp5(self, v=50):
