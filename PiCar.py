@@ -314,8 +314,8 @@ class SensorCar(Sonic):
         Returns:
             list: Analogwerte der 5 IR-Sensoren
         """
-        self._ir_sensors = self.ir.read_analog()
-        # self._ir_sensors = self.ir.get_average(2)
+        # self._ir_sensors = self.ir.read_analog()
+        self._ir_sensors = self.ir.get_average(2)
         return self._ir_sensors
 
     @property
@@ -392,6 +392,8 @@ class SensorCar(Sonic):
         print("Fahrparcour 5 beendet.")
 
     def test_ir(self):
-        for i in range(5):
+
+        for i in range(100):
             print(self._ir_sensor_analog)
+            print(self._ir_sensors)
             time.sleep(self.IF_FREQ)
