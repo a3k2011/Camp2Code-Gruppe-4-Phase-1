@@ -303,18 +303,6 @@ app.layout = dbc.Container(
 )
 
 
-# @app.callback(
-#     Output("dummy2", "children"),
-#     Input("sw_manual", "value"),
-# )
-# def load_car(value):
-#     if value:
-#         car.logger_start()
-#     else:
-#         car.logger_save()
-#     return 0
-
-
 @app.callback(
     Output("value_joystick", "children"),
     Input("joystick", "angle"),
@@ -385,17 +373,6 @@ def update_KPI_DD(logFile):
         return vmax, vmin, vmean, duration, route
     except:
         return 0, 0, 0, 0, 0
-
-
-# @app.callback(
-#     Output(component_id="label_test", component_property="children"),
-#     Input(component_id="slider_speed", component_property="value"),
-#     Input(component_id="dd_Fahrprogramm", component_property="value"),
-# )
-# def write_label(speed, Fahrprogramm):
-#     # fp.updateSpeed(speed)
-
-#     return "Fahrprogramm: " + str(Fahrprogramm) + " Speed: " + str(speed)
 
 
 @app.callback(
