@@ -343,13 +343,17 @@ def fahrparcour(car, pos):
         print("Ende der Strecke")
 
     elif pos == 8:
+        i = 0
+        counts = 0
         print("Datenaufzeichnung IR Sensoren")
         car.stop()
         user_in = input("Messungen pro Sekunde:")
         duration = 3  # Sekunden
         mps = 10
-        if isdigit(user_in):
+        try:
             mps = int(user_in)
+        except:
+            print("das war keine Zahl!")
         counts = mps * 3
         while i < counts and fp_allowed:
             a = car.drive_data
@@ -488,7 +492,7 @@ class SensorCar(Sonic):
     def __init__(self, filter_deepth: int = 2):
         super().__init__()
         self.ir = basisklassen.Infrared()
-        self._ir_sensor = self.ir.read_analog()
+        self._ir_sensors = self.ir.read_analog()
         self._steering_soll = [0] * filter_deepth
         self._ir_calib = None
         with open("config.json", "r") as f:
