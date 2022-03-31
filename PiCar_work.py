@@ -1,8 +1,6 @@
 import basisklassen
 import numpy as np
 from curses.ascii import isdigit
-
-
 from datetime import datetime
 import os, json, time
 
@@ -31,7 +29,7 @@ IR_MARK = 0.7
 
 class Datenlogger:
     """Datenlogger Klasse
-    speichert übergebene Tupels oder Listen mit Angabe des Zeitdeltas seid Start der Aufzeichnung in ein json-File
+    speichert übergebene Listen mit Angabe der Zeit ab Start der Aufzeichnung in ein json-File
     """
 
     def __init__(self, log_file_path=None):
@@ -69,7 +67,6 @@ class Datenlogger:
         if self._logger_running and (len(self._log_data) > 0):
             self._logger_running = False
             self._log_file["data"] = self._log_data
-            self._log_file["ende"] = str(datetime.now()).partition(".")[0]
             filename = self._log_file.get("start").partition(".")[0]
             filename = (
                 filename.replace("-", "").replace(":", "").replace(" ", "_")
@@ -89,8 +86,18 @@ class Datenlogger:
 
 
 def driveCar(car, speed, direction, angle, duration):
+    """Hilfsfunktion um des PiCar für eine definierte Zeit mit vorgegebenen Parametern zu fahren
+
+    Args:
+        car (PiCar): Eine Instanz eines PiCar
+        speed (int): Geschwindigkeit in %
+        direction (int): Fahrtrichtung
+        angle (int): Lenkwinkel
+        duration (int): Fahrdauer
+    """
+    global fp_allowed
     i = 0
-    while i < (10 * duration):
+    while fp_allowed and (i < (10 * duration)):
         car.steering_angle = angle
         car.drive(speed, direction)
         car.drive_data
@@ -100,11 +107,18 @@ def driveCar(car, speed, direction, angle, duration):
 
 
 def fahrparcours_stop():
+    """Abbruch des laufenden Fahrprogramms"""
     global fp_allowed
     fp_allowed = False
 
 
 def fahrparcour(car, pos):
+    """Fahrparcours abspielen
+
+    Args:
+        car (PiCar): eine Instanz des PiCar
+        pos (int): die Nummer des gewünschten Parcours
+    """
     global fp_allowed
     fp_allowed = True
     if pos == 1:
@@ -240,21 +254,21 @@ def fahrparcour(car, pos):
         time_run = 25  # Sekunden
         ignore_stop = 0.25 / time_period
         last_angle = 0
-        reverse = 0
-        time_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
-        counter_reverse = time_reverse / time_period
+        drive_reverse = 0
+        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
+        counter_reverse = time_drive_reverse / time_period
         while counter_stop < (time_run / time_period) and fp_allowed:
             if ignore_stop > 0:
                 ignore_stop -= 1
             st_angle = car.angle_from_ir()
-            if not reverse:
+            if not drive_reverse:
                 car_data = car.drive_data
                 if st_angle == 101:
                     print("invalid result")
                 if st_angle == 100 and not ignore_stop:
                     if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
-                        reverse = 1
-                        counter_reverse = time_reverse / time_period
+                        drive_reverse = 1
+                        counter_reverse = time_drive_reverse / time_period
                         car.drive(0, 0)
                     else:
                         print("STOP gefunden")
@@ -272,10 +286,10 @@ def fahrparcour(car, pos):
                     car.drive(35, -1)
                     if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
-                        reverse = 0
+                        drive_reverse = 0
                 else:
                     car.drive(0, 0)
-                    reverse = 0
+                    drive_reverse = 0
 
             time.sleep(time_period)
             counter_stop += 1
@@ -292,11 +306,11 @@ def fahrparcour(car, pos):
         time_run = 25  # Sekunden
         ignore_stop = 0.25 / time_period
         last_angle = 0
-        reverse = 0
+        drive_reverse = 0
         us_flag = False
-        time_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
+        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
         us_distance = 150
-        counter_reverse = time_reverse / time_period
+        counter_reverse = time_drive_reverse / time_period
         while counter_stop < (time_run / time_period) and fp_allowed:
             if ignore_stop > 0:
                 ignore_stop -= 1
@@ -306,7 +320,7 @@ def fahrparcour(car, pos):
                 us_flag = False
 
             st_angle = car.angle_from_ir()
-            if not reverse:
+            if not drive_reverse:
                 if us_flag or (us_distance < 15 and us_distance > 0):
                     us_flag = True
                     car.stop()
@@ -317,8 +331,8 @@ def fahrparcour(car, pos):
                         print("invalid result")
                     if st_angle == 100 and not ignore_stop:
                         if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
-                            reverse = 1
-                            counter_reverse = time_reverse / time_period
+                            drive_reverse = 1
+                            counter_reverse = time_drive_reverse / time_period
                             car.drive(0, 0)
                         else:
                             print("STOP gefunden")
@@ -336,10 +350,10 @@ def fahrparcour(car, pos):
                     car.drive(35, -1)
                     if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
-                        reverse = 0
+                        drive_reverse = 0
                 else:
                     car.drive(0, 0)
-                    reverse = 0
+                    drive_reverse = 0
 
             time.sleep(time_period)
             counter_stop += 1
@@ -386,7 +400,7 @@ def fahrparcour(car, pos):
 
 
 class BaseCar:
-    """Class BaseCar als Basis der Projekts
+    """Class BaseCar als Basis desq Projekts
     Grundfunktionen Antrieb und Lenkung des PiCar
     Einbinden des Datenloggers
     """
@@ -436,7 +450,7 @@ class BaseCar:
         self.logger_save()
 
     def stop_parcours(self):
-        """Abbroch des aktuell laufenden Fahrparcours"""
+        """Abbruch des aktuell laufenden Fahrparcours"""
         print("Emergency STOP")
         fahrparcours_stop()
 
