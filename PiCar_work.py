@@ -217,12 +217,12 @@ def fahrparcour(car, pos):
             ir_sens = car_data[4:9]
             st_angle = car.angle_from_ir()
 
+            if st_angle == 101:
+                print("invalid result")
             if st_angle == 100:
                 print("STOP gefunden")
                 if not ignore_stop:
                     break
-            elif st_angle == 101:
-                print("invalid result")
             else:
                 car.steering_angle = st_angle
             car.drive(speed_soll, 1)
@@ -250,6 +250,8 @@ def fahrparcour(car, pos):
             st_angle = car.angle_from_ir()
             if not reverse:
                 car_data = car.drive_data
+                if st_angle == 101:
+                    print("invalid result")
                 if st_angle == 100:
                     if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
                         reverse = 1
@@ -259,8 +261,6 @@ def fahrparcour(car, pos):
                         print("STOP gefunden")
                         if not ignore_stop:
                             break
-                elif st_angle == 101:
-                    print("invalid result")
                 else:
                     car.steering_angle = st_angle
                     car.drive(speed_soll, 1)
@@ -309,6 +309,8 @@ def fahrparcour(car, pos):
                     print("US-Distanz zu gering --> STOP")
                     # break
                 else:
+                    if st_angle == 101:
+                        print("invalid result")
                     if st_angle == 100:
                         if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
                             reverse = 1
@@ -318,8 +320,6 @@ def fahrparcour(car, pos):
                             print("STOP gefunden")
                             if not ignore_stop:
                                 break
-                    elif st_angle == 101:
-                        print("invalid result")
                     else:
                         car.steering_angle = st_angle
                         car.drive(speed_soll, 1)
