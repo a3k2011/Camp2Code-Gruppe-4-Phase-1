@@ -345,11 +345,16 @@ def fahrparcour(car, pos):
     elif pos == 8:
         print("Datenaufzeichnung IR Sensoren")
         car.stop()
-        i = 0
-        while i < 100:
+        user_in = input("Messungen pro Sekunde:")
+        duration = 3  # Sekunden
+        mps = 10
+        if isdigit(user_in):
+            mps = int(user_in)
+        counts = mps * 3
+        while i < counts and fp_allowed:
             a = car.drive_data
-            print("IR-Sensors:", a[4:10])
-            time.sleep(0.1)
+            print("IR-Sensors:", a[4:10], "US-Sensor:", a[3])
+            time.sleep(1 / mps)
             i += 1
         print()
 
@@ -608,7 +613,7 @@ def main():
                 5 = LineFollower
                 6 = LineFollower enge Kurve
                 7 = LineFollower mit US
-                8 = Datenaufzeichnung IR Sensor
+                8 = Sensor-Test
                 9 = gerade zuruecksetzen
                 "x" = abbrechen
                 "q" = beenden 
