@@ -11,14 +11,14 @@ angle_from_sensor = {
     0: 100,
     1: -40,
     3: -32,
-    2: -23,
-    7: -23,
-    6: -10,
+    2: -18,
+    7: -18,
+    6: -8,
     4: 0,
     14: 0,
-    12: 10,
-    8: 23,
-    28: 23,
+    12: 8,
+    8: 18,
+    28: 18,
     24: 32,
     16: 40,
     31: 100,
@@ -252,8 +252,8 @@ def fahrparcour(car, pos):
                 car_data = car.drive_data
                 if st_angle == 101:
                     print("invalid result")
-                if st_angle == 100:
-                    if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
+                if st_angle == 100 and not ignore_stop:
+                    if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
                         reverse = 1
                         counter_reverse = time_reverse / time_period
                         car.drive(0, 0)
@@ -271,7 +271,7 @@ def fahrparcour(car, pos):
                     counter_reverse -= 1
                     car.steering_angle = 0 - last_angle
                     car.drive(35, -1)
-                    if abs(st_angle) < 40:  # Linie wieder unter Mitte des PiCar
+                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
                         reverse = 0
                 else:
@@ -294,7 +294,7 @@ def fahrparcour(car, pos):
         ignore_stop = 0.25 / time_period
         last_angle = 0
         reverse = 0
-        time_reverse = 0.6  # max. Zeit für Rückwärtsfahrt
+        time_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
         us_distance = 150
         counter_reverse = time_reverse / time_period
         while counter_stop < (time_run / time_period) and fp_allowed:
@@ -311,8 +311,8 @@ def fahrparcour(car, pos):
                 else:
                     if st_angle == 101:
                         print("invalid result")
-                    if st_angle == 100:
-                        if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
+                    if st_angle == 100 and not ignore_stop:
+                        if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
                             reverse = 1
                             counter_reverse = time_reverse / time_period
                             car.drive(0, 0)
@@ -329,8 +329,8 @@ def fahrparcour(car, pos):
                 if counter_reverse > 0:
                     counter_reverse -= 1
                     car.steering_angle = 0 - last_angle
-                    car.drive(30, -1)
-                    if abs(st_angle) < 40:  # Linie wieder unter Mitte des PiCar
+                    car.drive(35, -1)
+                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
                         reverse = 0
                 else:
@@ -520,7 +520,7 @@ class SensorCar(Sonic):
         """
         # self._ir_sensors = self.ir.read_analog()
         self._ir_sensors = (
-            (self.ir.get_average(2) * np.array(self._ir_calib)).round(2).tolist()
+            (self.ir.get_average(10) * np.array(self._ir_calib)).round(2).tolist()
         )
         return self._ir_sensors
 
@@ -598,7 +598,7 @@ class SensorCar(Sonic):
 
 
 def main():
-    myCar = SensorCar(filter_deepth=4)
+    myCar = SensorCar(filter_deepth=2)
     myCar.stop()
     myCar.steering_angle = 0
     use_logger = False
