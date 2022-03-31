@@ -62,7 +62,8 @@ FP_LISTE = [
     {"label": "FP 3, US-Testfahrt", "value": 3},
     {"label": "FP 4, Erkundungsfahrt", "value": 4},
     {"label": "FP 5, LineFollower", "value": 5},
-    {"label": "FP 6, LineFollower + Korrektur", "value": 6},
+    {"label": "FP 6, LineFollower Eng", "value": 6},
+    {"label": "FP 6, LineFollower Eng + Hindernis", "value": 7},
 ]
 
 kpi_1 = dbc.Card([dbc.CardBody([html.H6("vMax"), html.P(id="kpi1")])])
@@ -431,6 +432,8 @@ def button_action(btn_start, btn_stop, fp, speed):
             car.fp5(speed)
         elif fp == 6:
             car.fp6(speed)
+        elif fp == 7:
+            car.fp7(speed)
         else:
             print("Kein gültiger Fahrparcour übergeben!")
 
