@@ -395,10 +395,8 @@ class SensorCar(Sonic):
     def breakWorker(self):
         while self._active:
             while not self._line:
-                print("Countdown startet")
                 time.sleep(1.5)
                 if not self._line:
-                    print("Abbruch")
                     self._active = False
                     break
             
