@@ -8,16 +8,16 @@ from curses.ascii import isdigit
 angle_from_sensor = {
     0: 100,
     1: -40,
-    3: -30,
-    2: -20,
-    7: -20,
+    3: -32,
+    2: -23,
+    7: -23,
     6: -10,
     4: 0,
     14: 0,
     12: 10,
-    8: 20,
-    28: 20,
-    24: 30,
+    8: 23,
+    28: 23,
+    24: 32,
     16: 40,
     31: 100,
 }
@@ -31,6 +31,7 @@ def driveCar(car, speed, direction, angle, duration):
     while i < (10 * duration):
         car.steering_angle = angle
         car.drive(speed, direction)
+        car.drive_data
         time.sleep(0.1)
         i += 1
     car.stop()
@@ -76,54 +77,18 @@ def fahrparcour(car, pos):
             time.sleep(0.1)
 
     elif pos == 2:
-        print("Fahrparcours 1 gewaehlt:")
-        print("3 Sekunden gerade vor")
-        counter = 0
-        state = 0
-        while True:
-            car.drive_data
-            if state == 0:
-                counter = 30
-                car.drive(40, 1)
-                car.steering_angle = 0
-                state = 1
-            elif state == 1:
-                if counter > 0:
-                    counter -= 1
-                else:
-                    print("eine Sekunde Pause")
-                    counter = 10
-                    car.drive(0, 0)
-                    state = 2
-            elif state == 2:
-                if counter > 0:
-                    counter -= 1
-                else:
-                    print("3 Sekunden gerade zurueck")
-                    counter = 30
-                    car.drive(40, -1)
-                    car.steering_angle = 0
-                    state = 3
-            elif state == 3:
-                if counter > 0:
-                    counter -= 1
-                else:
-                    counter = 0
-                    car.drive(0, 0)
-                    break
-            time.sleep(0.1)
-        # print("Fahrparcours 2 gewaehlt:")
-        # print("2 Sekunden gerade vor")
-        # driveCar(car, 40, 1, 0, 2)
-        # print("8 Sekunden vorwarts links herum")
-        # driveCar(car, 45, 1, -45, 8)
-        # print("1 Sekunde Pause")
-        # driveCar(car, 0, 0, 0, 1)
-        # print("8 Sekunden rueckwarts links herum")
-        # driveCar(car, 45, -1, -45, 8)
-        # print("2 Sekunden gerade zurueck")
-        # driveCar(car, 40, -1, 0, 2)
-        # car.stop()
+        print("Fahrparcours 2 gewaehlt:")
+        print("2 Sekunden gerade vor")
+        driveCar(car, 40, 1, 0, 2)
+        print("8 Sekunden vorwarts links herum")
+        driveCar(car, 45, 1, -45, 8)
+        print("1 Sekunde Pause")
+        driveCar(car, 0, 0, 0, 1)
+        print("8 Sekunden rueckwarts links herum")
+        driveCar(car, 45, -1, -45, 8)
+        print("2 Sekunden gerade zurueck")
+        driveCar(car, 40, -1, 0, 2)
+        car.stop()
         print()
 
     elif pos == 3:
@@ -180,41 +145,93 @@ def fahrparcour(car, pos):
             ir_sens = car_data[4:9]
             st_angle = car.angle_from_ir()
 
-            if st_angle != 100:
-                car.steering_angle = st_angle
-            else:
+            if st_angle == 100:
                 print("STOP gefunden")
                 if not ignore_stop:
                     break
-            speed_limit = int(112 - (abs(st_angle) * 2.25))
-            print("speed limit: ", speed_limit)
-            speed_drive = speed_soll
-            # if speed_drive > speed_limit:
-            #     speed_drive = speed_limit
-            car.drive(speed_drive, 1)
+            elif st_angle == 101:
+                print("invalid result")
+            else:
+                car.steering_angle = st_angle
+            car.drive(speed_soll, 1)
             time.sleep(time_period)
             counter_stop += 1
         car.stop()
         car.steering_angle = 0
         print("Ende der Strecke")
 
-    elif pos == 7:
-        print("Fahrparcours 7 gewaehlt:")
-        print("gerade zuruecksetzen")
-        driveCar(50, -1, 0, 2)
+    elif pos == 6:
+        print("Line Follower enge Kurve")
+        speed_limit = 100
+        speed_soll = 40
+        counter_stop = 0
+        time_period = 0.01
+        time_run = 25  # Sekunden
+        ignore_stop = 0.25 / time_period
+        last_angle = 0
+        reverse = 0
+        time_reverse = 0.4  # max. Zeit für Rückwärtsfahrt
+        counter_reverse = time_reverse / time_period
+        while counter_stop < (time_run / time_period):
+            if ignore_stop > 0:
+                ignore_stop -= 1
+            st_angle = car.angle_from_ir()
+            if not reverse:
+                car_data = car.drive_data
+                # ir_sens = car_data[4:9]
+
+                if st_angle == 100:
+                    if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
+                        reverse = 1
+                        counter_reverse = time_reverse / time_period
+                        car.drive(0, 0)
+                        # zurücksetzen
+                    else:
+                        print("STOP gefunden")
+                        if not ignore_stop:
+                            break
+                elif st_angle == 101:
+                    print("invalid result")
+                else:
+                    car.steering_angle = st_angle
+                    car.drive(speed_soll, 1)
+                    last_angle = st_angle
+                    
+
+            else:  # Rückwärtsfahrt
+                if counter_reverse > 0:
+                    counter_reverse -= 1
+                    car.steering_angle = 0 - last_angle
+                    car.drive(30, -1)
+                    if st_angle == 0:  # Linie wieder unter Mitte des PiCar
+                        car.drive(0, 0)
+                        reverse = 0
+                else:
+                    car.drive(0, 0)
+                    reverse = 0
+
+            time.sleep(time_period)
+            counter_stop += 1
         car.stop()
-        print()
+        car.steering_angle = 0
+        print("Ende der Strecke")
 
     elif pos == 8:
         print("Datenaufzeichnung IR Sensoren")
         car.stop()
-        input("Taste für start")
         i = 0
         while i < 100:
             a = car.drive_data
-            print("IR-Sensors:", a[-5:])
+            print("IR-Sensors:", a[4:10])
             time.sleep(0.1)
             i += 1
+        print()
+
+    elif pos == 9:
+        print("Fahrparcours 7 gewaehlt:")
+        print("gerade zuruecksetzen")
+        driveCar(50, -1, 0, 2)
+        car.stop()
         print()
 
     else:
@@ -228,12 +245,16 @@ class BaseCar:
         self._direction = 1
         with open("config.json", "r") as f:
             data = json.load(f)
-            turning_offset = data["turning_offset"]
-            forward_A = data["forward_A"]
-            forward_B = data["forward_B"]
+            turning_offset = data.get("turning_offset")
+            forward_A = data.get("forward_A")
+            forward_B = data.get("forward_B")
             self._log_file_path = data.get("log_file_path")
             if self._log_file_path == None:
                 self._log_file_path = "Folder"
+            ir_calib = data.get("ir_calib")
+            if ir_calib != None:
+                self._ir_calib = ir_calib
+
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
         self._dl = datenlogger.Datenlogger(log_file_path=self._log_file_path)
@@ -254,6 +275,7 @@ class BaseCar:
 
     def stop_parcours(self):
         print("Emergency STOP")
+        self.drive(0, 0)
 
     @property
     def speed(self):
@@ -308,9 +330,13 @@ class Sonic(BaseCar):
     def __init__(self):
         super().__init__()
         self.us = basisklassen.Ultrasonic()
+        self._us_distance = 0
 
     @property
     def distance(self):
+        self._us_distance = self.us.distance()
+        if self._us_distance > 150:  # Wert nicht relevant
+            self._us_distance = -5
         return self.us.distance()
 
     @property
@@ -333,6 +359,14 @@ class SensorCar(Sonic):
         self.ir = basisklassen.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
         self._steering_soll = [0] * filter_deepth
+        self._ir_calib = None
+        with open("config.json", "r") as f:
+            data = json.load(f)
+            ir_calib = data.get("ir_calib")
+            if ir_calib != None:
+                self._ir_calib = ir_calib
+            else:
+                self._ir_calib = [1, 1, 1, 1, 1]
 
     @property
     def ir_sensor_analog(self):
@@ -342,8 +376,42 @@ class SensorCar(Sonic):
             list: Analogwerte der 5 IR-Sensoren
         """
         # self._ir_sensors = self.ir.read_analog()
-        self._ir_sensors = self.ir.get_average(2)
+        self._ir_sensors = (
+            (self.ir.get_average(2) * np.array(self._ir_calib)).round(2).tolist()
+        )
         return self._ir_sensors
+
+    def calibrate_ir_sensors(self):
+        while True:
+            input("Sensoren auf hellem Untergrund platzieren, dann Taste drücken")
+            a = self.ir.get_average(100)
+            print("Messergebnis:", a)
+            user_in = input("Ergebnis verwenden? (j/n/q)")
+            if user_in == "n":
+                print("Neue Messung")
+            elif user_in == "j":
+                messung = np.array(a)
+                ir_calib = messung.mean() / messung
+                self._ir_calib = ir_calib.round(4)
+                print("Kalibrierwerte:", self._ir_calib)
+                data = {}
+                try:
+                    with open("config.json", "r") as f:
+                        data = json.load(f)
+                except:
+                    print("File error read")
+                data["ir_calib"] = self._ir_calib.tolist()
+                try:
+                    with open("config.json", "w") as f:
+                        json.dump(data, f)
+                except:
+                    print("File error write")
+                break
+            else:
+                print("Abbruch durch Beutzer")
+                break
+
+        print("IR Kalibrierung beendet")
 
     def angle_from_ir(self):
         """berechnet den Soll-Lenkeinschlag damit das Fahrzeug der Linie folgen kann
@@ -366,7 +434,7 @@ class SensorCar(Sonic):
                 ir_out = 100
             return ir_out
         else:
-            return 100
+            return 101
 
     @property
     def drive_data(self):
@@ -393,13 +461,18 @@ def main():
     use_logger = False
     while True:
         print("Test des PiCar:")
-        user_in = input("Sollen die Daten aufgezeichnet werden (j/n/q)?: ")
+        user_in = input(
+            "Sollen die Daten aufgezeichnet werden (j/n/q/) (c für IR Calib)?: "
+        )
         if user_in.lower() == "j":
             use_logger = True
         else:
             use_logger = False
         if user_in.lower() == "q":
             break
+        if user_in == "c":
+            myCar.calibrate_ir_sensors()
+            next
         user_in = input(
             """Fahrparcours Auswahl: 
                 1 = vor / zurueck
@@ -407,8 +480,10 @@ def main():
                 3 = vor bis Hindernis
                 4 = Erkundungsfahrt
                 5 = LineFollower
-                7 = gerade zuruecksetzen
+                6 = LineFollower enge Kurve
+                7 = LineFollower mit US
                 8 = Datenaufzeichnung IR Sensor
+                9 = gerade zuruecksetzen
                 "x" = abbrechen
                 "q" = beenden 
                 Bitte waehlen: """

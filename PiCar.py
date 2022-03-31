@@ -105,12 +105,12 @@ class BaseCar:
         -45 Grad ist max links,
         +45 Grad ist max rechts"""
         if value > STEERINGE_ANGLE_MAX:
-            self._steering_angle = 90 + STEERINGE_ANGLE_MAX
+            self._steering_angle = STEERINGE_ANGLE_MAX
         elif value < (0 - STEERINGE_ANGLE_MAX):
-            self._steering_angle = 90 - STEERINGE_ANGLE_MAX
+            self._steering_angle = 0 - STEERINGE_ANGLE_MAX
         else:
-            self._steering_angle = 90 + value
-        self.fw.turn(self._steering_angle)
+            self._steering_angle = value
+        self.fw.turn(90 + self._steering_angle)
 
     def drive(self, geschwindigkeit, richtung):
         self.speed = geschwindigkeit
