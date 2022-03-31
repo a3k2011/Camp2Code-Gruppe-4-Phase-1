@@ -242,7 +242,7 @@ def fahrparcour(car, pos):
         ignore_stop = 0.25 / time_period
         last_angle = 0
         reverse = 0
-        time_reverse = 0.6  # max. Zeit für Rückwärtsfahrt
+        time_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
         counter_reverse = time_reverse / time_period
         while counter_stop < (time_run / time_period) and fp_allowed:
             if ignore_stop > 0:
@@ -270,7 +270,7 @@ def fahrparcour(car, pos):
                 if counter_reverse > 0:
                     counter_reverse -= 1
                     car.steering_angle = 0 - last_angle
-                    car.drive(30, -1)
+                    car.drive(35, -1)
                     if abs(st_angle) < 40:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
                         reverse = 0
@@ -307,22 +307,23 @@ def fahrparcour(car, pos):
                 if us_distance < 20 and us_distance > 0:
                     car.stop()
                     print("US-Distanz zu gering --> STOP")
-                    break
-                if st_angle == 100:
-                    if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
-                        reverse = 1
-                        counter_reverse = time_reverse / time_period
-                        car.drive(0, 0)
-                    else:
-                        print("STOP gefunden")
-                        if not ignore_stop:
-                            break
-                elif st_angle == 101:
-                    print("invalid result")
+                    # break
                 else:
-                    car.steering_angle = st_angle
-                    car.drive(speed_soll, 1)
-                    last_angle = st_angle
+                    if st_angle == 100:
+                        if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
+                            reverse = 1
+                            counter_reverse = time_reverse / time_period
+                            car.drive(0, 0)
+                        else:
+                            print("STOP gefunden")
+                            if not ignore_stop:
+                                break
+                    elif st_angle == 101:
+                        print("invalid result")
+                    else:
+                        car.steering_angle = st_angle
+                        car.drive(speed_soll, 1)
+                        last_angle = st_angle
 
             else:  # Rückwärtsfahrt
                 if counter_reverse > 0:
