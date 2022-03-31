@@ -63,7 +63,7 @@ FP_LISTE = [
     {"label": "FP 4, Erkundungsfahrt", "value": 4},
     {"label": "FP 5, LineFollower", "value": 5},
     {"label": "FP 6, LineFollower Eng", "value": 6},
-    {"label": "FP 6, LineFollower Eng + Hindernis", "value": 7},
+    {"label": "FP 7, LineFollower Eng + Hindernis", "value": 7},
 ]
 
 kpi_1 = dbc.Card([dbc.CardBody([html.H6("vMax"), html.P(id="kpi1")])])
