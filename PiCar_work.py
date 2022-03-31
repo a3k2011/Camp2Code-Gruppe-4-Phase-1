@@ -24,6 +24,7 @@ angle_from_sensor = {
     31: 100,
 }
 lookup = np.array([1, 2, 4, 8, 16])
+fp_allowed = False
 
 STEERINGE_ANGLE_MAX = 45
 IR_MARK = 0.7
@@ -97,9 +98,6 @@ def driveCar(car, speed, direction, angle, duration):
         time.sleep(0.1)
         i += 1
     car.stop()
-
-
-fp_allowed = False
 
 
 def fahrparcours_stop():
@@ -252,14 +250,69 @@ def fahrparcour(car, pos):
             st_angle = car.angle_from_ir()
             if not reverse:
                 car_data = car.drive_data
-                # ir_sens = car_data[4:9]
-
                 if st_angle == 100:
                     if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
                         reverse = 1
                         counter_reverse = time_reverse / time_period
                         car.drive(0, 0)
-                        # zurücksetzen
+                    else:
+                        print("STOP gefunden")
+                        if not ignore_stop:
+                            break
+                elif st_angle == 101:
+                    print("invalid result")
+                else:
+                    car.steering_angle = st_angle
+                    car.drive(speed_soll, 1)
+                    last_angle = st_angle
+
+            else:  # Rückwärtsfahrt
+                if counter_reverse > 0:
+                    counter_reverse -= 1
+                    car.steering_angle = 0 - last_angle
+                    car.drive(30, -1)
+                    if abs(st_angle) < 40:  # Linie wieder unter Mitte des PiCar
+                        car.drive(0, 0)
+                        reverse = 0
+                else:
+                    car.drive(0, 0)
+                    reverse = 0
+
+            time.sleep(time_period)
+            counter_stop += 1
+        car.stop()
+        car.steering_angle = 0
+        print("Ende der Strecke")
+
+    elif pos == 7:
+        print("Line Follower mit US")
+        speed_limit = 100
+        speed_soll = 40
+        counter_stop = 0
+        time_period = 0.01
+        time_run = 25  # Sekunden
+        ignore_stop = 0.25 / time_period
+        last_angle = 0
+        reverse = 0
+        time_reverse = 0.6  # max. Zeit für Rückwärtsfahrt
+        us_distance = 150
+        counter_reverse = time_reverse / time_period
+        while counter_stop < (time_run / time_period) and fp_allowed:
+            if ignore_stop > 0:
+                ignore_stop -= 1
+            car_data = car.drive_data
+            us_distance = car_data[3]
+            st_angle = car.angle_from_ir()
+            if not reverse:
+                if us_distance < 20 and us_distance > 0:
+                    car.stop()
+                    print("US-Distanz zu gering --> STOP")
+                    break
+                if st_angle == 100:
+                    if abs(last_angle) >= 35:  # war ausserhalb des Bereichs
+                        reverse = 1
+                        counter_reverse = time_reverse / time_period
+                        car.drive(0, 0)
                     else:
                         print("STOP gefunden")
                         if not ignore_stop:
@@ -301,7 +354,7 @@ def fahrparcour(car, pos):
         print()
 
     elif pos == 9:
-        print("Fahrparcours 7 gewaehlt:")
+        print("Fahrparcours 9 gewaehlt:")
         print("gerade zuruecksetzen")
         driveCar(50, -1, 0, 2)
         car.stop()
@@ -430,7 +483,7 @@ class SensorCar(Sonic):
     def __init__(self, filter_deepth: int = 2):
         super().__init__()
         self.ir = basisklassen.Infrared()
-        self._ir_sensor_analog = self.ir.read_analog()
+        self._ir_sensor = self.ir.read_analog()
         self._steering_soll = [0] * filter_deepth
         self._ir_calib = None
         with open("config.json", "r") as f:
@@ -493,7 +546,7 @@ class SensorCar(Sonic):
             int: Soll-Lenkeinschlag (100 bedeutet STOP)
         """
         # Lookup-Table für mögliche Sensor-Werte
-        ir_data = np.array(self.ir_sensor_analog)
+        ir_data = np.array(self._ir_sensors)
         compValue = IR_MARK * ir_data.max()
         sd = np.where(ir_data < compValue, 1, 0)
         lookupValue = (lookup * sd).sum()
