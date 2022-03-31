@@ -342,7 +342,6 @@ class SensorCar(Sonic):
             lookupValue = (lookup * sensor_digital).sum()
             ir_result = angle_from_sensor.get(lookupValue)
             if ir_result != None:
-                print(ir_result)
                 if ir_result < 100:
                     self._steering_soll = self._steering_soll[1:]
                     self._steering_soll.append(ir_result)
@@ -379,9 +378,8 @@ class SensorCar(Sonic):
 
     def test_ir(self):
 
-        for i in range(100):
+        for i in range(10):
             print(self._ir_sensor_analog)
-            print(self._ir_sensors)
             time.sleep(self.IF_FREQ)
 
 
@@ -468,6 +466,7 @@ def main(modus):
         3: 'Fahrparcour 3',
         4: 'Fahrparcour 4',
         5: 'Fahrparcour 5',
+        9: 'Ausgabe IR-Werte'
     }
     warnung = 'ACHTUNG! Das Auto wird ein Stück fahren!\n Dücken Sie ENTER zum Start.'
 
@@ -480,7 +479,7 @@ def main(modus):
 
     while modus == None:
         modus = input('Wähle  (Andere Taste für Abbruch): ? ')
-        if modus in ['0', '1', '2', '3', '4', '5']:
+        if modus in ['0', '1', '2', '3', '4', '5', '9']:
             break
         else:
             modus = None
@@ -530,6 +529,9 @@ def main(modus):
             SensorCar().fp5() 
         else:
             print("Abbruch")
+
+    if modus == 9:
+        SensorCar().test_ir()
 
 
 if __name__ == "__main__":
