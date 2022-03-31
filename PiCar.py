@@ -1,4 +1,5 @@
 import basisklassen
+import click
 import os, json, time
 from datetime import datetime
 import numpy as np
@@ -287,7 +288,7 @@ class SensorCar(Sonic):
 
     IF_FREQ = 0.05
 
-    def __init__(self, filter_deepth: int = 5):
+    def __init__(self, filter_deepth: int = 2):
         super().__init__()
         self.ir = basisklassen.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
@@ -405,7 +406,6 @@ class Datenlogger:
 
     def start(self):
         """starten des Loggers"""
-        print("Logger gestartet")
         self._logger_running = True
         self._start_timestamp = time.time()
         self._log_file["start"] = str(datetime.now()).partition(".")[0]
@@ -444,8 +444,9 @@ class Datenlogger:
             print("Log-File saved to:", logfile)
 
 
-
-def main():
+@click.command()
+@click.option('--modus', '--m', type=int, default=None, help="Startet Auswahl der Fahrzeug-Funktionen")
+def main(modus):
     '''
         Main-Programm: Manuelles Ansteuern der implementierten Fahrparcours 1-6
 
@@ -459,17 +460,76 @@ def main():
                         v (int): Geschwindigkeit. Default 50
     '''
 
-    myCar = SensorCar()
+    print('-- Manuelle Auswahl der Fahrzeug-Funktionen --')
+    modi = {
+        0: 'Kalibrierung der IR-Sensoren',
+        1: 'Fahrparcour 1',
+        2: 'Fahrparcour 2',
+        3: 'Fahrparcour 3',
+        4: 'Fahrparcour 4',
+        5: 'Fahrparcour 5',
+    }
+    warnung = 'ACHTUNG! Das Auto wird ein Stück fahren!\n Dücken Sie ENTER zum Start.'
 
-    #myCar.fp1(v=50)
+    if modus == None:
+        print('--' * 20)
+        print('Auswahl:')
+        for m in modi.keys():
+            print('{i} - {name}'.format(i=m, name=modi[m]))
+        print('--' * 20)
 
-    #myCar.fp2(v=50)
+    while modus == None:
+        modus = input('Wähle  (Andere Taste für Abbruch): ? ')
+        if modus in ['0', '1', '2', '3', '4', '5']:
+            break
+        else:
+            modus = None
+            print('Getroffene Auswahl nicht möglich.')
+            quit()
+    modus = int(modus)
 
-    #myCar.fp3(v=50)
+    if modus == 0:
+        x = input(warnung)
+        print(modi[modus])
+        if x == '':
+            pass 
+        else:
+            print("Abbruch")
 
-    #myCar.fp4(v=50)
+    if modus == 1:
+        x = input(warnung)
+        if x == '':
+            SensorCar().fp1() 
+        else:
+            print("Abbruch")
 
-    myCar.fp5(v=50)
+    if modus == 2:
+        x = input(warnung)
+        if x == '':
+            SensorCar().fp2() 
+        else:
+            print("Abbruch")
+    
+    if modus == 3:
+        x = input(warnung)
+        if x == '':
+            SensorCar().fp3() 
+        else:
+            print("Abbruch")
+
+    if modus == 4:
+        x = input(warnung)
+        if x == '':
+            SensorCar().fp4() 
+        else:
+            print("Abbruch")
+
+    if modus == 5:
+        x = input(warnung)
+        if x == '':
+            SensorCar().fp5() 
+        else:
+            print("Abbruch")
 
 
 if __name__ == "__main__":
