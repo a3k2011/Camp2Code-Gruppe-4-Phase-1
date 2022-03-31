@@ -179,7 +179,7 @@ class BaseCar:
 
 class Sonic(BaseCar):
 
-    US_FREQ = 0.05
+    US_FREQ = 0.1
     US_OFFSET = 20
 
     def __init__(self):
@@ -287,7 +287,7 @@ class SensorCar(Sonic):
     """
 
     IF_FREQ = 0.05
-    IR_MARK = 0.8
+    IR_MARK = 0.7
 
     def __init__(self, filter_deepth: int = 2):
         super().__init__()
@@ -296,6 +296,7 @@ class SensorCar(Sonic):
         self._ir_sensors = [20, 20, 10, 20, 20]
         self._line = True
         self._steering_soll = [0] * filter_deepth
+        self._steering_angle_temp = 0
         self._ir_calib = None
         with open("config.json", "r") as f:
             data = json.load(f)
@@ -351,25 +352,25 @@ class SensorCar(Sonic):
         sensor_digital = np.where(ir_data < compValue, 1, 0)
         lookupValue = (lookup * sensor_digital).sum()
         ir_result = angle_from_sensor.get(lookupValue)
+        if ir_result == None:
+            return 101
         return ir_result
 
     def lenkFunction5(self):
         while self._active:
             ir_result = self.get_ir_result()
 
-            if ir_result != None:
-                if ir_result < 100:
-                    self._steering_soll = self._steering_soll[1:]
-                    self._steering_soll.append(ir_result)
-                    ir_out = np.mean(self._steering_soll)
-                    self.steering_angle = ir_out
-                else:
-                    ir_out = 100
-                    self._line = False
-                    self._active = False
+            if ir_result < 100:
+                self._steering_soll = self._steering_soll[1:]
+                self._steering_soll.append(ir_result)
+                ir_out = np.mean(self._steering_soll)
+                self.steering_angle = ir_out
+            elif ir_result == 101:
+                print("None-Fehler")
             else:
-                # return 101
-                print("IR-Wert unbekannt:", sensor_digital)
+                ir_out = 100
+                self._line = False
+                self._active = False
 
             time.sleep(self.IF_FREQ)
 
@@ -378,42 +379,37 @@ class SensorCar(Sonic):
             
             while self._active and self._line:
                 ir_result = self.get_ir_result()
-                print(ir_result)
-                if ir_result != None:
-                    if ir_result < 100:
-                        self._steering_soll = self._steering_soll[1:]
-                        self._steering_soll.append(ir_result)
-                        ir_out = np.mean(self._steering_soll)
-                        self.steering_angle = ir_out
-                    else:
-                        ir_out = 100
-                        self._line = False
-                        self.drive(50,-1)
-                        self.steering_angle = ir_out*-1
-                else:
-                    # return 101
-                    print("IR-Wert unbekannt:", sensor_digital)
-                time.sleep(self.IF_FREQ)
 
-            while self._active and not self._line:
-                ir_result = self.get_ir_result()
-                if ir_result < 32:
-                    self._line = True
-                    self.drive(50,1)
+                if ir_result < 100:
                     self._steering_soll = self._steering_soll[1:]
                     self._steering_soll.append(ir_result)
                     ir_out = np.mean(self._steering_soll)
                     self.steering_angle = ir_out
+                    self._steering_angle_temp = ir_out
+                elif ir_result == 101:
+                    print("None-Fehler")
+                else:
+                    ir_out = 100
+                    self._line = False
+                    self.drive(self._tmpspeed,-1)
+                    self.steering_angle = self._steering_angle_temp*-1
+                    cntTimer = time.perf_counter()
+                
                 time.sleep(self.IF_FREQ)
 
-    def breakWorker(self):
-        while self._active:
-            while not self._line:
-                time.sleep(1.0)
-                if not self._line:
+            while self._active and not self._line:
+                ir_result = self.get_ir_result()
+                if ir_result < 100:
+                    self._line = True
+                    self.drive(self._tmpspeed,1)
+                    break
+                if not self._line and ((time.perf_counter() - cntTimer) > 0.8):
                     self._active = False
                     break
-            
+
+                time.sleep(self.IF_FREQ)
+
+
     def fp5(self, v=50):
         print("Fahrparcour 5 gestartet.")
         # Starte Drive Mode
@@ -423,7 +419,6 @@ class SensorCar(Sonic):
         Bsp: lenkFunction
         """
         self._worker.submit(self.lenkFunction5)
-        # self._worker.submit(self.inputWorker)
 
         # Starte die Fahrt
         self.drive(v, 1)
@@ -443,7 +438,7 @@ class SensorCar(Sonic):
         Bsp: lenkFunction
         """
         self._worker.submit(self.lenkFunction6)
-        self._worker.submit(self.breakWorker)
+        self._tmpspeed = v
 
         # Starte die Fahrt
         self.drive(v, 1)
