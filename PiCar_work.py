@@ -562,7 +562,7 @@ class SensorCar(Sonic):
             int: Soll-Lenkeinschlag (100 bedeutet STOP)
         """
         # Lookup-Table für mögliche Sensor-Werte
-        ir_data = np.array(self._ir_sensors)
+        ir_data = np.array(self.ir_sensor_analog)
         compValue = IR_MARK * ir_data.max()
         sd = np.where(ir_data < compValue, 1, 0)
         lookupValue = (lookup * sd).sum()
