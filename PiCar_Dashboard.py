@@ -1,7 +1,5 @@
-import os
-import json
+import os, json, time
 import pandas as pd
-import time
 import datetime
 from dash import dash, dcc, html, callback_context
 import plotly.express as px
@@ -13,7 +11,7 @@ import socket
 
 
 df = None
-car = PiCar.SensorCar(filter_deepth=4)
+car = PiCar.SensorCar(filter_deepth=2)
 
 
 def get_ip_address():
