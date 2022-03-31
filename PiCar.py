@@ -337,7 +337,7 @@ class SensorCar(Sonic):
     def lenkFunction(self):
         while self._active:
             ir_data = np.array(self._ir_sensors)
-            compValue = 0.6 * ir_data.max()
+            compValue = 0.7 * ir_data.max()
             sensor_digital = np.where(ir_data < compValue, 1, 0)
             lookupValue = (lookup * sensor_digital).sum()
             ir_result = angle_from_sensor.get(lookupValue)
