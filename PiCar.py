@@ -376,15 +376,17 @@ class SensorCar(Sonic):
                         '4': 'self.steering_angle = 40'}
         while self._active:
             idx_min = str(np.argmin(self._ir_sensors))
-            std = np.std(self._ir_sensors)
-            if std < 4 and std != 0:
+            maxVal = np.max(self._ir_sensors)
+            norm_ir = np.array(self._ir_sensors)/maxVal*100
+            std = np.std(norm_ir)
+            if std < 6 and std != 0:
                 self.drive(self.speed,-1)
                 if idx_min == 0 or idx_min == 1:
                     self.steering_angle = 40
                 else:
                     self.steering_angle = -40
                 self._line = False
-                while np.argmin(self._ir_sensors) != 2 and self._active and np.std(self._ir_sensors) < 6:
+                while np.argmin(self._ir_sensors) != 2 and self._active and np.std(self._ir_sensors) < 8:
                     time.sleep(self.IF_FREQ)
                 self.drive(self.speed,1)
                 self._line = True
