@@ -1,3 +1,4 @@
+"""Import der notwendigen Bibliotheken."""
 import basisklassen
 import click
 import os, json, time
@@ -6,6 +7,7 @@ import numpy as np
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
+"""Lenkwinkel Lookup-Tabelle fuer IR-Sensoren"""
 angle_from_sensor = {
     0: 100,
     1: -40,
@@ -25,14 +27,28 @@ angle_from_sensor = {
 lookup = np.array([1, 2, 4, 8, 16])
 
 
-STEERINGE_ANGLE_MAX = 45
-
-
 class BaseCar:
+    """Die Klasse BaseCar implementiert die Grund-Funktionen des PiCars.
 
+    Args:
+        LOG_FREQ (float): Zeit-Interval zum Speichern von Fahrdaten im Datenlogger.
+        SA_MAX (int): Maximaler Lenkwinkel des PiCars
+    """
     LOG_FREQ = 0.1
+    SA_MAX = 45
 
     def __init__(self):
+        """Initialisierung der Klasse BaseCar.
+        
+        Args:
+            steering_angle(float): Lenkwinkel des PiCars.
+            speed(float): Geschwindigkeit des PiCars.
+            direction(float): Fahrtrichtung des PiCars.
+            active(bool): Flag zur Erkennung des Fahr-Zustandes.
+            worker(ThreadPoolExecutor): Instanz der Klasse ThreadPoolExecutor.
+            dl(Datenlogger): Instanz der Klasse Datenlogger.
+            tmpspeed(int): Speichert die Geschwindigkeit bei Uebergabe in Fahrparcour.
+        """
         self._steering_angle = 0
         self._speed = 0
         self._direction = 1
@@ -51,6 +67,8 @@ class BaseCar:
         self._dl = None
 
     def startDriveMode(self):
+        """Funktion zur Initalisierung des Fahr-Modus mit Multi-Threading"""
+
         self._active = True
         self.steering_angle = 0
         self._dl = Datenlogger(log_file_path=self._log_file_path)
@@ -58,6 +76,8 @@ class BaseCar:
         self._worker.submit(self.dlWorker)
 
     def endDriveMode(self, waitingWorker=False):
+        """Funktion zum Beenden des Fahr-Modus mit Multi-Threading"""
+
         if waitingWorker:
             self._worker.shutdown(wait=True)
         else:
@@ -67,6 +87,10 @@ class BaseCar:
         self.stop()
 
     def dlWorker(self):
+        """Funktion zur Nutzung des Datenloggers mit Multi-Threading.
+        
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im BaseCar genutzt.  
+        """
         self._dl.start()
         while self._active:
             self._dl.append(self.drive_data)
@@ -75,43 +99,86 @@ class BaseCar:
 
     @property
     def drive_data(self):
+        """Ausgabe der Fahrdaten fuer den Datenlogger.
+
+            Returns:
+                [list]: speed, direction, steering_angle
+        """
         return [self.speed, self.direction, self.steering_angle]
 
     @property
     def speed(self):
+        """Returns speed.
+
+            Returns:
+                [int]: speed. 
+        """
         return self._speed
 
     @speed.setter
     def speed(self, value):
+        """Sets speed.
+
+            Args:
+                [int]: speed. 
+        """
         self._speed = value
 
     @property
     def direction(self):
+        """Returns direction.
+
+            Returns:
+                [int]: direction. 
+        """
         return self._direction
 
     @direction.setter
     def direction(self, value):
+        """Sets direction.
+
+            Args:
+                [int]: direction. 
+        """
         self._direction = value
 
     @property
     def steering_angle(self):
+        """Returns steering angle.
+
+            Returns:
+                [float]: steering angle. 
+        """
         return self._steering_angle
 
     @steering_angle.setter
     def steering_angle(self, value):
-        """Hier wird auf ein anderes Winkelsystem normiert.
-        0 Grad = geradeaus,
-        -45 Grad ist max links,
-        +45 Grad ist max rechts"""
-        if value > STEERINGE_ANGLE_MAX:
-            self._steering_angle = STEERINGE_ANGLE_MAX
-        elif value < (0 - STEERINGE_ANGLE_MAX):
-            self._steering_angle = 0 - STEERINGE_ANGLE_MAX
+        """Sets steering angle.
+
+            Args:
+                [float]: steering angle.
+
+            Hinweis:
+            Hier wird auf ein anderes Winkelsystem normiert.
+            0 Grad = geradeaus,
+            -45 Grad ist max links,
+            +45 Grad ist max rechts
+        """
+        if value > self.SA_MAX:
+            self._steering_angle = self.SA_MAX
+        elif value < (0 - self.SA_MAX):
+            self._steering_angle = 0 - self.SA_MAX
         else:
             self._steering_angle = value
         self.fw.turn(90 + self._steering_angle)
 
     def drive(self, geschwindigkeit, richtung):
+        """Funktion zum Fahren PiCars
+
+        Args:
+            [int]: geschwindigkeit
+            [int]: richtung
+        """
         self.speed = geschwindigkeit
         self.bw.speed = self.speed
         self.direction = richtung
@@ -123,9 +190,13 @@ class BaseCar:
             self.stop()
 
     def stop(self):
+        """Funktion zum stoppen der Hinterraeder des PiCars"""
+
         self.bw.stop()
 
     def fp1(self, v=50):
+        """Funktion für den Fahrparcour 1"""
+
         print("Fahrparcour 1 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
@@ -147,11 +218,13 @@ class BaseCar:
         print("Fahrparcour 1 beendet.")
 
     def fp2(self, v=50):
+        """Funktion für den Fahrparcour 2"""
+
         print("Fahrparcour 2 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
 
-        for sa in [(-STEERINGE_ANGLE_MAX + 5), (STEERINGE_ANGLE_MAX - 5)]:
+        for sa in [(-self.SA_MAX + 5), (self.SA_MAX - 5)]:
             # Vorwaerts 1sec gerade
             self.steering_angle = 0
             self.drive(v, 1)
@@ -178,11 +251,24 @@ class BaseCar:
 
 
 class Sonic(BaseCar):
+    """Die Klasse Sonic fuegt die Funktion des US-Sensors zur BaseCar-Klasse hinzu.
 
+    Args:
+        BaseCar (_type_): Erbt von der Klasse BaseCar.
+        US_FREQ (float): Abtastrade des US-Sensors in Sekunden.
+        US_OFFSET (float): Offset fuer den US-Sensor bis zur Erkennung eines Hindernisses.
+    """
     US_FREQ = 0.1
     US_OFFSET = 20
 
     def __init__(self):
+        """Initialisierung der Klasse Sonic.
+        
+        Args:
+            distance(int): Abstand zum aktuellen Hindernis.
+            hindernis(bool): Flag zur Erkennung eines Hindernisses.
+            tmpspeed(int): Speichert die Geschwindigkeit bei Uebergabe in Fahrparcour.
+        """
         super().__init__()
         self.us = basisklassen.Ultrasonic()
         self._distance = self.US_OFFSET + 1
@@ -190,11 +276,17 @@ class Sonic(BaseCar):
         self._tmpspeed = None
 
     def startDriveMode(self):
+        """Funktion zur Initalisierung des Fahr-Modus mit Multi-Threading"""
+
         super().startDriveMode()
         self._worker.submit(self.usWorker)
         self._hindernis = False
 
     def usWorker(self):
+        """Funktion zur Abtastung des US-Sensors mit Multi-Threading.
+        
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.  
+        """
         while self._active:
             if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
                 self._hindernis = True
@@ -202,6 +294,11 @@ class Sonic(BaseCar):
                 time.sleep(self.US_FREQ)
 
     def inputWorker(self):
+        """Funktion zur Interaktion mit Nutzer mit Multi-Threading.
+        
+        Hinweis: Muss zur Verwendung im jeweiligen Fahrparcour hinzugefuegt werden.
+                self._worker.submit(self.inputWorker)
+        """
         while self._active:
             inpUser = input("Fahrbefehl eingeben: ")
             dictBefehle = {
@@ -222,6 +319,8 @@ class Sonic(BaseCar):
                 continue
 
     def rangierenWorker(self):
+        """Funktion fuehrt die Rangier-Funktionalitaeten fuer Fahrparcour 4 aus."""
+
         while self._active:
             if self._hindernis:
 
@@ -239,15 +338,28 @@ class Sonic(BaseCar):
 
     @property
     def distance(self):
+        """Returns distance in cm.
+
+        Returns:
+            [int]: Distance in cm for a single measurement. 
+            (Konstante US_OFFSET+1 fuer < 0cm oder > 150cm)
+        """
         dist = self.us.distance()
         self._distance = dist if (dist >= 0 and dist <=150) else (self.US_OFFSET + 1)
         return self._distance
 
     @property
     def drive_data(self):
+        """Ausgabe der Fahrdaten fuer den Datenlogger.
+
+        Returns:
+            [list]: speed, direction, steering_angle, distance
+        """
         return [self.speed, self.direction, self.steering_angle, self._distance]
 
     def fp3(self, v=50):
+        """Funktion für den Fahrparcour 3"""
+
         print("Fahrparcour 3 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
@@ -262,6 +374,8 @@ class Sonic(BaseCar):
         print("Fahrparcour 3 beendet.")
 
     def fp4(self, v=50):
+        """Funktion für den Fahrparcour 4"""
+
         print("Fahrparcour 4 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
@@ -280,16 +394,28 @@ class Sonic(BaseCar):
 
 
 class SensorCar(Sonic):
-    """Die Klasse SensorCar fuegt die Funtkion des IR-Sensors zur SonicCar-Klasse hinzu
+    """Die Klasse SensorCar fuegt die Funktion des IR-Sensors zur Sonic-Klasse hinzu.
 
     Args:
         SonicCar (_type_): Erbt von der Klasse SonicCar
+        IF_FREQ (float): Abtastrate des IF-Sensors in Sekunden.
+        IR_MARK (float): Schwellwert zur Erkennung der schwarzen Linie.
     """
-
     IF_FREQ = 0.05
     IR_MARK = 0.7
 
     def __init__(self, filter_deepth: int = 2):
+        """Initialisierung der Klasse SensorCar.
+        
+        Args:
+            ir_sensor_analog(list): Analoge Messwerte des IR-Sensors.
+            ir_sensors(list): Analoge Messwerte des IR-Sensors.
+            line(bool): Flag zur Erkennung der Line.
+            steering_soll(list): tbd.
+            steering_angle_temp(float): Temporaer gespeicherter Lenkwinkel.
+            ir_calib(config.json): Importiert die kalibrierten Werte fuer den IR-Sensor aus der config.json.
+        """
+
         super().__init__()
         self.ir = basisklassen.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
@@ -307,21 +433,27 @@ class SensorCar(Sonic):
                 self._ir_calib = [1, 1, 1, 1, 1]
 
     def startDriveMode(self):
+        """Funktion zur Initalisierung des Fahr-Modus mit Multi-Threading"""
+
         super().startDriveMode()
         self._worker.submit(self.ifWorker)
         self._line = True
 
     def ifWorker(self):
+        """Funktion zur Abtastung des IF-Sensors mit Multi-Threading.
+        
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.  
+        """
         while self._active:
             self.ir_sensor_analog
             time.sleep(self.IF_FREQ)
 
     @property
     def ir_sensor_analog(self):
-        """Ausgabe der Werte der IR-Sensoren
+        """Ausgabe der Werte der IR-Sensoren unter Beruecksichtigung der Kalibrierten IR-Sensoren.
 
         Returns:
-            list: Analogwerte der 5 IR-Sensoren
+            [list]: Analogwerte der 5 IR-Sensoren
         """
         # self._ir_sensors = self.ir.read_analog()
         self._ir_sensors = (
@@ -331,10 +463,10 @@ class SensorCar(Sonic):
 
     @property
     def drive_data(self):
-        """Ausgabe der Fahrdaten
+        """Ausgabe der Fahrdaten fuer den Datenlogger.
 
         Returns:
-            list: speed, direction, steering_angle, distance, ir_sensors
+            [list]: speed, direction, steering_angle, distance, ir_sensors
         """
         data = [
             self._speed,
@@ -347,6 +479,11 @@ class SensorCar(Sonic):
         return data
 
     def get_ir_result(self):
+        """Ausgabe des Lenkwinkels anhand Uebersetzungstabelle
+
+        Returns:
+        [int]: Soll-Lenkwinkel aus Uebersetzungstabelle.
+        """
         ir_data = np.array(self._ir_sensors)
         compValue = self.IR_MARK * ir_data.max()
         sensor_digital = np.where(ir_data < compValue, 1, 0)
@@ -357,6 +494,8 @@ class SensorCar(Sonic):
         return ir_result
 
     def lenkFunction5(self):
+        """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 5 aus."""
+
         while self._active:
             ir_result = self.get_ir_result()
 
@@ -375,6 +514,8 @@ class SensorCar(Sonic):
             time.sleep(self.IF_FREQ)
 
     def lenkFunction6(self):
+        """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 6 aus."""
+
         while self._active:
             
             while self._active and self._line:
@@ -411,13 +552,12 @@ class SensorCar(Sonic):
 
 
     def fp5(self, v=50):
+        """Funktion für den Fahrparcour 5"""
+
         print("Fahrparcour 5 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
-        """
-        Hier muss eine Reaktions-Funktion zum Worker submitted werden!
-        Bsp: lenkFunction
-        """
+
         self._worker.submit(self.lenkFunction5)
 
         # Starte die Fahrt
@@ -430,13 +570,12 @@ class SensorCar(Sonic):
         print("Fahrparcour 5 beendet.")
 
     def fp6(self, v=60):
+        """Funktion für den Fahrparcour 6"""
+
         print("Fahrparcour 6 gestartet.")
         # Starte Drive Mode
         self.startDriveMode()
-        """
-        Hier muss eine Reaktions-Funktion zum Worker submitted werden!
-        Bsp: lenkFunction
-        """
+
         self._worker.submit(self.lenkFunction6)
         self._tmpspeed = v
 
@@ -450,12 +589,18 @@ class SensorCar(Sonic):
         print("Fahrparcour 6 beendet.")
 
     def test_ir(self):
+        """Funktion gibt 10 Messwerte des IR-Sensors aus."""
 
         for i in range(10):
             print(self.ir_sensor_analog)
             time.sleep(self.IF_FREQ)
 
     def calibrate_ir_sensors(self):
+        """Funktion kalibriert die IR-Sensoren unter hellem Untergrund (Weisses Blatt).
+
+        Returns:
+        [config.json]: Fuegt den Key: "ir_calib" hinzu.
+        """
         while True:
             input("Sensoren auf hellem Untergrund platzieren, dann Taste drücken")
             a = self.ir.get_average(100)
@@ -490,9 +635,13 @@ class SensorCar(Sonic):
 
 class Datenlogger:
     """Datenlogger Klasse
-    speichert übergebene Tupels oder Listen mit Angabe des Zeitdeltas seid Start der Aufzeichnung in ein json-File
-    """
 
+    Funktion:
+    Speichert übergebene Tupels oder Listen mit Angabe des Zeitdeltas seid Start der Aufzeichnung in ein json-File
+
+    Returns:
+        [*json]: Messwerte aus uebergebenen Daten mit bliebigem Interval.
+    """
     def __init__(self, log_file_path=None):
         """Zielverzeichnis fuer Logfiles kann beim Init mit uebergeben werden
             Wenn der Ordner nicht existiert wird er erzeugt
@@ -507,23 +656,22 @@ class Datenlogger:
         self._log_file_path = log_file_path
 
     def start(self):
-        """starten des Loggers"""
+        """Funktion startet den Datenlogger"""
+
         self._logger_running = True
         self._start_timestamp = time.time()
         self._log_file["start"] = str(datetime.now()).partition(".")[0]
 
     def append(self, data):
-        """Daten an den Logger senden
+        """Funktionen fuegt Daten in die Liste des Datenloggers hinzu."""
 
-        Args:
-            data (list): ein Element (Liste) wird an den Logger uebergeben
-        """
         if self._logger_running:
             ts = round((time.time() - self._start_timestamp), 2)
             self._log_data.append([ts] + data)
 
     def save(self):
-        """speichert die uebergebenen Daten"""
+        """Funktion speichert die uebergebenen Daten"""
+
         if self._logger_running and (len(self._log_data) > 0):
             self._logger_running = False
             self._log_file["data"] = self._log_data
