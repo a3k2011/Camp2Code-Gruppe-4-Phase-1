@@ -395,7 +395,7 @@ class SensorCar(Sonic):
     def breakWorker(self):
         while self._active:
             while not self._line:
-                time.sleep(1.5)
+                time.sleep(1)
                 if not self._line:
                     self._active = False
                     break
