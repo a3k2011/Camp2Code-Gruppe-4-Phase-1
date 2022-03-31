@@ -347,14 +347,20 @@ def fahrparcour(car, pos):
         counts = 0
         print("Datenaufzeichnung IR Sensoren")
         car.stop()
-        user_in = input("Messungen pro Sekunde:")
         duration = 3  # Sekunden
         mps = 10
+        user_in = input("Messungen pro Sekunde:")
         try:
             mps = int(user_in)
         except:
             print("das war keine Zahl!")
-        counts = mps * 3
+
+        user_in = input("Messdauer in Sekunden:")
+        try:
+            duration = int(user_in)
+        except:
+            print("das war keine Zahl!")
+        counts = mps * duration
         while i < counts and fp_allowed:
             a = car.drive_data
             print("IR-Sensors:", a[4:10], "US-Sensor:", a[3])
@@ -371,6 +377,7 @@ def fahrparcour(car, pos):
 
     else:
         print("Fahrparcours", pos, "nicht bekannt!")
+    car.us.stop()
 
 
 class BaseCar:

@@ -76,7 +76,7 @@ FP_LISTE = [
         "value": 7,
     },
     {
-        "label": "FP 8, IR-Seonsr-Messwerte anfnehmen",
+        "label": "FP 8, Sensor-Test",
         "value": 8,
     },
     {
