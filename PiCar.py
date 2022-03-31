@@ -241,7 +241,7 @@ class Sonic(BaseCar):
     @property
     def distance(self):
         dist = self.us.distance()
-        self._distance = dist if dist >= 0 else (self.US_OFFSET + 1)
+        self._distance = dist if (dist >= 0 and dist <=150) else (self.US_OFFSET + 1)
         return self._distance
 
     @property
@@ -367,7 +367,6 @@ class SensorCar(Sonic):
         Bsp: lenkFunction
         """
         self._worker.submit(self.lenkFunction)
-        # self._worker.submit(self.lineFunction)
         # self._worker.submit(self.inputWorker)
 
         # Starte die Fahrt
