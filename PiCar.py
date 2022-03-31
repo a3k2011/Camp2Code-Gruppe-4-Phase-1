@@ -448,6 +448,20 @@ class SensorCar(Sonic):
             self.ir_sensor_analog
             time.sleep(self.IF_FREQ)
 
+    def usWorker(self):
+        """Funktion zur Abtastung des US-Sensors mit Multi-Threading.
+        
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.  
+        """
+        while self._active:
+            if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
+                self._hindernis = True
+                self._cntHindernis = time.perf_counter()
+            if self._hindernis == True and (self.distance - self.US_OFFSET) > 0:
+                self._hindernis = False
+        
+            time.sleep(self.US_FREQ)
+
     @property
     def ir_sensor_analog(self):
         """Ausgabe der Werte der IR-Sensoren unter Beruecksichtigung der Kalibrierten IR-Sensoren.
@@ -550,6 +564,51 @@ class SensorCar(Sonic):
 
                 time.sleep(self.IF_FREQ)
 
+    def lenkFunction7(self):
+        """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 7 aus."""
+
+        while self._active:
+            while self._active and not self._hindernis:
+                while self._active and self._line and not self._hindernis:
+                    ir_result = self.get_ir_result()
+
+                    if ir_result < 100:
+                        self._steering_soll = self._steering_soll[1:]
+                        self._steering_soll.append(ir_result)
+                        ir_out = np.mean(self._steering_soll)
+                        self.steering_angle = ir_out
+                        self._steering_angle_temp = ir_out
+                    elif ir_result == 101:
+                        print("None-Fehler")
+                    else:
+                        ir_out = 100
+                        self._line = False
+                        self.drive(self._tmpspeed,-1)
+                        self.steering_angle = self._steering_angle_temp*-1
+                        cntTimer = time.perf_counter()
+                    
+                    time.sleep(self.IF_FREQ)
+
+                while self._active and not self._line and not self._hindernis:
+                    ir_result = self.get_ir_result()
+                    if ir_result < 100:
+                        self._line = True
+                        self.drive(self._tmpspeed,1)
+                        break
+                    if not self._line and ((time.perf_counter() - cntTimer) > 0.8):
+                        self._active = False
+                        break
+
+                    time.sleep(self.IF_FREQ)
+                
+            while self._active and self._hindernis:
+                self.stop()
+                if (time.perf_counter() - self._cntHindernis) > 5:
+                    self._active = False
+                time.sleep(self.US_FREQ)
+            else:
+                self.drive(self._tmpspeed,1)
+
 
     def fp5(self, v=50):
         """Funktion für den Fahrparcour 5"""
@@ -569,7 +628,7 @@ class SensorCar(Sonic):
         # Ende Drive Mode
         print("Fahrparcour 5 beendet.")
 
-    def fp6(self, v=60):
+    def fp6(self, v=50):
         """Funktion für den Fahrparcour 6"""
 
         print("Fahrparcour 6 gestartet.")
@@ -587,6 +646,25 @@ class SensorCar(Sonic):
 
         # Ende Drive Mode
         print("Fahrparcour 6 beendet.")
+
+    def fp7(self, v=50):
+        """Funktion für den Fahrparcour 7"""
+
+        print("Fahrparcour 7 gestartet.")
+        # Starte Drive Mode
+        self.startDriveMode()
+
+        self._worker.submit(self.lenkFunction7)
+        self._tmpspeed = v
+
+        # Starte die Fahrt
+        self.drive(v, 1)
+
+        # Wartet auf Fertigstellung aller Threads
+        self.endDriveMode(waitingWorker=True)
+
+        # Ende Drive Mode
+        print("Fahrparcour 7 beendet.")
 
     def test_ir(self):
         """Funktion gibt 10 Messwerte des IR-Sensors aus."""
@@ -698,14 +776,14 @@ class Datenlogger:
 @click.option('--modus', '--m', type=int, default=None, help="Startet Auswahl der Fahrzeug-Funktionen")
 def main(modus):
     '''
-        Main-Programm: Manuelles Ansteuern der implementierten Fahrparcours 1-6
+        Main-Programm: Manuelles Ansteuern der implementierten Fahrparcours 1-7
 
         Args[Klassen]:
                         PiCar.BaseCar()
                         PiCar.Sonic()
                         PiCar.SensorCar()
         Funktionen der Klassen:
-                        fp1() - fp6()
+                        fp1() - fp7()
         Args[Fahrparcour]:
                         v (int): Geschwindigkeit. Default 50
     '''
@@ -719,6 +797,7 @@ def main(modus):
         4: 'Fahrparcour 4',
         5: 'Fahrparcour 5',
         6: 'Fahrparcour 6',
+        7: 'Fahrparcour 7',
         9: 'Ausgabe IR-Werte'
     }
     warnung = 'ACHTUNG! Das Auto wird ein Stück fahren!\n Dücken Sie ENTER zum Start.'
@@ -732,7 +811,7 @@ def main(modus):
 
     while modus == None:
         modus = input('Wähle  (Andere Taste für Abbruch): ? ')
-        if modus in ['0', '1', '2', '3', '4', '5', '6', '9']:
+        if modus in ['0', '1', '2', '3', '4', '5', '6', '7', '9']:
             break
         else:
             modus = None
@@ -783,6 +862,13 @@ def main(modus):
         x = input(warnung)
         if x == '':
             SensorCar().fp6() 
+        else:
+            print("Abbruch")
+
+    if modus == 7:
+        x = input(warnung)
+        if x == '':
+            SensorCar().fp7() 
         else:
             print("Abbruch")
 
