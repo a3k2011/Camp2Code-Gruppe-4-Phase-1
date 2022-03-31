@@ -9,10 +9,19 @@ from dash.dependencies import Input, Output, State
 import dash_daq as daq
 import dash_bootstrap_components as dbc
 import PiCar
+import socket
 
 
 df = None
 car = PiCar.SensorCar(filter_deepth=4)
+
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    socket_ip = s.getsockname()[0]
+    s.close()
+    return socket_ip
 
 
 def getLoggerFiles():
@@ -348,7 +357,7 @@ def computeKPI(data):
     vmax = data["v"].max()
     vmin = data["v"][1:].min()
     vmean = round(data["v"].mean(), 2)
-    duration = round(data["time"].max(),2)
+    duration = round(data["time"].max(), 2)
     route = round(vmean * duration, 2)
     return vmax, vmin, vmean, duration, route
 
@@ -414,19 +423,19 @@ def updateFileList(value):
 def button_action(btn_start, btn_stop, fp, speed):
     changed_id = [p["prop_id"] for p in callback_context.triggered][0]
     if "btn_start" in changed_id:
-        if fp==1:
+        if fp == 1:
             car.fp1(speed)
-        elif fp==2:
+        elif fp == 2:
             car.fp2(speed)
-        elif fp==3:
+        elif fp == 3:
             car.fp3(speed)
-        elif fp==4:
+        elif fp == 4:
             car.fp4(speed)
-        elif fp==5:
+        elif fp == 5:
             car.fp5(speed)
         else:
             print("Kein gültiger Fahrparcour übergeben!")
-            
+
     if "btn_stop" in changed_id:
         car._active = False
         car._worker.shutdown(wait=True)
@@ -435,4 +444,4 @@ def button_action(btn_start, btn_stop, fp, speed):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, host=get_ip_address())
