@@ -287,7 +287,7 @@ class SensorCar(Sonic):
     """
 
     IF_FREQ = 0.01
-    IR_MARK = 0.7
+    IR_MARK = 0.8
 
     def __init__(self, filter_deepth: int = 2):
         super().__init__()
@@ -363,10 +363,45 @@ class SensorCar(Sonic):
                     self._line = False
                     self._active = False
             else:
+                # return 101
                 print("IR-Wert unbekannt:", sensor_digital)
 
             time.sleep(self.IF_FREQ)
 
+    def lenkFunctionEasy(self):
+        dictActions = {'0': 'self.steering_angle = -40',
+                        '1': 'self.steering_angle = -30',
+                        '2': 'self.steering_angle = 0',
+                        '3': 'self.steering_angle = 30',
+                        '4': 'self.steering_angle = 40'}
+        while self._active:
+            idx_min = str(np.argmin(self._ir_sensors))
+            std = np.std(self._ir_sensors)
+            if std < 4 and std != 0:
+                self.drive(self.speed,-1)
+                if idx_min == 0 or idx_min == 1:
+                    self.steering_angle = 40
+                else:
+                    self.steering_angle = -40
+                self._line = False
+                while np.argmin(self._ir_sensors) != 2 and self._active and np.std(self._ir_sensors) < 6:
+                    time.sleep(self.IF_FREQ)
+                self.drive(self.speed,1)
+                self._line = True
+            if idx_min in dictActions and self._active:
+                    exec(dictActions[idx_min])
+                    time.sleep(self.IF_FREQ)
+
+    def breakWorker(self):
+        while self._active:
+            while not self._line:
+                print("Countdown startet")
+                time.sleep(1.5)
+                if not self._line:
+                    print("Abbruch")
+                    self._active = False
+                    break
+            
     def fp5(self, v=50):
         print("Fahrparcour 5 gestartet.")
         # Starte Drive Mode
@@ -386,6 +421,26 @@ class SensorCar(Sonic):
 
         # Ende Drive Mode
         print("Fahrparcour 5 beendet.")
+
+    def fp6(self, v=50):
+        print("Fahrparcour 6 gestartet.")
+        # Starte Drive Mode
+        self.startDriveMode()
+        """
+        Hier muss eine Reaktions-Funktion zum Worker submitted werden!
+        Bsp: lenkFunction
+        """
+        self._worker.submit(self.lenkFunctionEasy)
+        self._worker.submit(self.breakWorker)
+
+        # Starte die Fahrt
+        self.drive(v, 1)
+
+        # Wartet auf Fertigstellung aller Threads
+        self.endDriveMode(waitingWorker=True)
+
+        # Ende Drive Mode
+        print("Fahrparcour 6 beendet.")
 
     def test_ir(self):
 
@@ -508,6 +563,7 @@ def main(modus):
         3: 'Fahrparcour 3',
         4: 'Fahrparcour 4',
         5: 'Fahrparcour 5',
+        6: 'Fahrparcour 6',
         9: 'Ausgabe IR-Werte'
     }
     warnung = 'ACHTUNG! Das Auto wird ein Stück fahren!\n Dücken Sie ENTER zum Start.'
@@ -521,7 +577,7 @@ def main(modus):
 
     while modus == None:
         modus = input('Wähle  (Andere Taste für Abbruch): ? ')
-        if modus in ['0', '1', '2', '3', '4', '5', '9']:
+        if modus in ['0', '1', '2', '3', '4', '5', '6', '9']:
             break
         else:
             modus = None
@@ -565,6 +621,13 @@ def main(modus):
         x = input(warnung)
         if x == '':
             SensorCar().fp5() 
+        else:
+            print("Abbruch")
+
+    if modus == 6:
+        x = input(warnung)
+        if x == '':
+            SensorCar().fp6() 
         else:
             print("Abbruch")
 
