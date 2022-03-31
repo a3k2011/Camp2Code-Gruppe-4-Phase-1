@@ -286,7 +286,8 @@ class SensorCar(Sonic):
         SonicCar (_type_): Erbt von der Klasse SonicCar
     """
 
-    IF_FREQ = 0.05
+    IF_FREQ = 0.01
+    IR_MARK = 0.7
 
     def __init__(self, filter_deepth: int = 2):
         super().__init__()
@@ -295,6 +296,14 @@ class SensorCar(Sonic):
         self._ir_sensors = [20, 20, 10, 20, 20]
         self._line = True
         self._steering_soll = [0] * filter_deepth
+        self._ir_calib = None
+        with open("config.json", "r") as f:
+            data = json.load(f)
+            ir_calib = data.get("ir_calib")
+            if ir_calib != None:
+                self._ir_calib = ir_calib
+            else:
+                self._ir_calib = [1, 1, 1, 1, 1]
 
     def startDriveMode(self):
         super().startDriveMode()
@@ -314,7 +323,9 @@ class SensorCar(Sonic):
             list: Analogwerte der 5 IR-Sensoren
         """
         # self._ir_sensors = self.ir.read_analog()
-        self._ir_sensors = self.ir.get_average(2)
+        self._ir_sensors = (
+            (self.ir.get_average(2) * np.array(self._ir_calib)).round(2).tolist()
+        )
         return self._ir_sensors
 
     @property
@@ -337,7 +348,7 @@ class SensorCar(Sonic):
     def lenkFunction(self):
         while self._active:
             ir_data = np.array(self._ir_sensors)
-            compValue = 0.7 * ir_data.max()
+            compValue = self.IR_MARK * ir_data.max()
             sensor_digital = np.where(ir_data < compValue, 1, 0)
             lookupValue = (lookup * sensor_digital).sum()
             ir_result = angle_from_sensor.get(lookupValue)
@@ -379,9 +390,40 @@ class SensorCar(Sonic):
     def test_ir(self):
 
         for i in range(10):
-            print(self._ir_sensor_analog)
+            print(self.ir_sensor_analog)
             time.sleep(self.IF_FREQ)
 
+    def calibrate_ir_sensors(self):
+        while True:
+            input("Sensoren auf hellem Untergrund platzieren, dann Taste drücken")
+            a = self.ir.get_average(100)
+            print("Messergebnis:", a)
+            user_in = input("Ergebnis verwenden? (j/n/q)")
+            if user_in == "n":
+                print("Neue Messung")
+            elif user_in == "j":
+                messung = np.array(a)
+                ir_calib = messung.mean() / messung
+                self._ir_calib = ir_calib.round(4)
+                print("Kalibrierwerte:", self._ir_calib)
+                data = {}
+                try:
+                    with open("config.json", "r") as f:
+                        data = json.load(f)
+                except:
+                    print("File error read")
+                data["ir_calib"] = self._ir_calib.tolist()
+                try:
+                    with open("config.json", "w") as f:
+                        json.dump(data, f)
+                except:
+                    print("File error write")
+                break
+            else:
+                print("Abbruch durch Beutzer")
+                break
+
+        print("IR Kalibrierung beendet")
 
 
 class Datenlogger:
@@ -488,12 +530,8 @@ def main(modus):
     modus = int(modus)
 
     if modus == 0:
-        x = input(warnung)
         print(modi[modus])
-        if x == '':
-            pass 
-        else:
-            print("Abbruch")
+        SensorCar().calibrate_ir_sensors()
 
     if modus == 1:
         x = input(warnung)
