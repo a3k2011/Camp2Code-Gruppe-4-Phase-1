@@ -34,12 +34,13 @@ class BaseCar:
         LOG_FREQ (float): Zeit-Interval zum Speichern von Fahrdaten im Datenlogger.
         SA_MAX (int): Maximaler Lenkwinkel des PiCars
     """
+
     LOG_FREQ = 0.1
     SA_MAX = 45
 
     def __init__(self):
         """Initialisierung der Klasse BaseCar.
-        
+
         Args:
             steering_angle(float): Lenkwinkel des PiCars.
             speed(float): Geschwindigkeit des PiCars.
@@ -52,14 +53,27 @@ class BaseCar:
         self._steering_angle = 0
         self._speed = 0
         self._direction = 1
-        with open("config.json", "r") as f:
-            data = json.load(f)
-            turning_offset = data["turning_offset"]
-            forward_A = data["forward_A"]
-            forward_B = data["forward_B"]
-            self._log_file_path = data.get("log_file_path")
-            if self._log_file_path == None:
-                self._log_file_path = "Logger"
+        data = {}
+        try:
+            with open("config.json", "r") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            with open("config.json", "w") as f:
+                data = {}
+                data["turning_offset"] = 0
+                data["forward_A"] = 0
+                data["forward_B"] = 0
+                data["log_file_path"] = "Logger"
+                json.dump(data, f)
+            print("Bitte config.json anpassen!")
+
+        turning_offset = data.get("turning_offset")
+        forward_A = data.get("forward_A")
+        forward_B = data.get("forward_B")
+        self._log_file_path = data.get("log_file_path")
+        if self._log_file_path == None:
+            self._log_file_path = "Folder"
+
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
         self._active = False
@@ -88,8 +102,8 @@ class BaseCar:
 
     def dlWorker(self):
         """Funktion zur Nutzung des Datenloggers mit Multi-Threading.
-        
-        Hinweis: Wird automatisch in der Funktion startDriveMode() im BaseCar genutzt.  
+
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im BaseCar genutzt.
         """
         self._dl.start()
         while self._active:
@@ -101,8 +115,8 @@ class BaseCar:
     def drive_data(self):
         """Ausgabe der Fahrdaten fuer den Datenlogger.
 
-            Returns:
-                [list]: speed, direction, steering_angle
+        Returns:
+            [list]: speed, direction, steering_angle
         """
         return [self.speed, self.direction, self.steering_angle]
 
@@ -110,8 +124,8 @@ class BaseCar:
     def speed(self):
         """Returns speed.
 
-            Returns:
-                [int]: speed. 
+        Returns:
+            [int]: speed.
         """
         return self._speed
 
@@ -119,8 +133,8 @@ class BaseCar:
     def speed(self, value):
         """Sets speed.
 
-            Args:
-                [int]: speed. 
+        Args:
+            [int]: speed.
         """
         self._speed = value
 
@@ -128,8 +142,8 @@ class BaseCar:
     def direction(self):
         """Returns direction.
 
-            Returns:
-                [int]: direction. 
+        Returns:
+            [int]: direction.
         """
         return self._direction
 
@@ -137,8 +151,8 @@ class BaseCar:
     def direction(self, value):
         """Sets direction.
 
-            Args:
-                [int]: direction. 
+        Args:
+            [int]: direction.
         """
         self._direction = value
 
@@ -146,8 +160,8 @@ class BaseCar:
     def steering_angle(self):
         """Returns steering angle.
 
-            Returns:
-                [float]: steering angle. 
+        Returns:
+            [float]: steering angle.
         """
         return self._steering_angle
 
@@ -155,14 +169,14 @@ class BaseCar:
     def steering_angle(self, value):
         """Sets steering angle.
 
-            Args:
-                [float]: steering angle.
+        Args:
+            [float]: steering angle.
 
-            Hinweis:
-            Hier wird auf ein anderes Winkelsystem normiert.
-            0 Grad = geradeaus,
-            -45 Grad ist max links,
-            +45 Grad ist max rechts
+        Hinweis:
+        Hier wird auf ein anderes Winkelsystem normiert.
+        0 Grad = geradeaus,
+        -45 Grad ist max links,
+        +45 Grad ist max rechts
         """
         if value > self.SA_MAX:
             self._steering_angle = self.SA_MAX
@@ -258,12 +272,13 @@ class Sonic(BaseCar):
         US_FREQ (float): Abtastrade des US-Sensors in Sekunden.
         US_OFFSET (float): Offset fuer den US-Sensor bis zur Erkennung eines Hindernisses.
     """
+
     US_FREQ = 0.1
     US_OFFSET = 20
 
     def __init__(self):
         """Initialisierung der Klasse Sonic.
-        
+
         Args:
             distance(int): Abstand zum aktuellen Hindernis.
             hindernis(bool): Flag zur Erkennung eines Hindernisses.
@@ -284,8 +299,8 @@ class Sonic(BaseCar):
 
     def usWorker(self):
         """Funktion zur Abtastung des US-Sensors mit Multi-Threading.
-        
-        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.  
+
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.
         """
         while self._active:
             if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
@@ -295,7 +310,7 @@ class Sonic(BaseCar):
 
     def inputWorker(self):
         """Funktion zur Interaktion mit Nutzer mit Multi-Threading.
-        
+
         Hinweis: Muss zur Verwendung im jeweiligen Fahrparcour hinzugefuegt werden.
                 self._worker.submit(self.inputWorker)
         """
@@ -341,11 +356,11 @@ class Sonic(BaseCar):
         """Returns distance in cm.
 
         Returns:
-            [int]: Distance in cm for a single measurement. 
+            [int]: Distance in cm for a single measurement.
             (Konstante US_OFFSET+1 fuer < 0cm oder > 150cm)
         """
         dist = self.us.distance()
-        self._distance = dist if (dist >= 0 and dist <=150) else (self.US_OFFSET + 1)
+        self._distance = dist if (dist >= 0 and dist <= 150) else (self.US_OFFSET + 1)
         return self._distance
 
     @property
@@ -401,12 +416,13 @@ class SensorCar(Sonic):
         IF_FREQ (float): Abtastrate des IF-Sensors in Sekunden.
         IR_MARK (float): Schwellwert zur Erkennung der schwarzen Linie.
     """
+
     IF_FREQ = 0.05
     IR_MARK = 0.7
 
     def __init__(self, filter_deepth: int = 2):
         """Initialisierung der Klasse SensorCar.
-        
+
         Args:
             ir_sensor_analog(list): Analoge Messwerte des IR-Sensors.
             ir_sensors(list): Analoge Messwerte des IR-Sensors.
@@ -441,8 +457,8 @@ class SensorCar(Sonic):
 
     def ifWorker(self):
         """Funktion zur Abtastung des IF-Sensors mit Multi-Threading.
-        
-        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.  
+
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.
         """
         while self._active:
             self.ir_sensor_analog
@@ -450,8 +466,8 @@ class SensorCar(Sonic):
 
     def usWorker(self):
         """Funktion zur Abtastung des US-Sensors mit Multi-Threading.
-        
-        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.  
+
+        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.
         """
         while self._active:
             if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
@@ -459,7 +475,7 @@ class SensorCar(Sonic):
                 self._cntHindernis = time.perf_counter()
             if self._hindernis == True and (self.distance - self.US_OFFSET) > 0:
                 self._hindernis = False
-        
+
             time.sleep(self.US_FREQ)
 
     @property
@@ -531,7 +547,7 @@ class SensorCar(Sonic):
         """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 6 aus."""
 
         while self._active:
-            
+
             while self._active and self._line:
                 ir_result = self.get_ir_result()
 
@@ -546,17 +562,17 @@ class SensorCar(Sonic):
                 else:
                     ir_out = 100
                     self._line = False
-                    self.drive(self._tmpspeed,-1)
-                    self.steering_angle = self._steering_angle_temp*-1
+                    self.drive(self._tmpspeed, -1)
+                    self.steering_angle = self._steering_angle_temp * -1
                     cntTimer = time.perf_counter()
-                
+
                 time.sleep(self.IF_FREQ)
 
             while self._active and not self._line:
                 ir_result = self.get_ir_result()
                 if ir_result < 100:
                     self._line = True
-                    self.drive(self._tmpspeed,1)
+                    self.drive(self._tmpspeed, 1)
                     break
                 if not self._line and ((time.perf_counter() - cntTimer) > 0.8):
                     self._active = False
@@ -583,32 +599,31 @@ class SensorCar(Sonic):
                     else:
                         ir_out = 100
                         self._line = False
-                        self.drive(self._tmpspeed,-1)
-                        self.steering_angle = self._steering_angle_temp*-1
+                        self.drive(self._tmpspeed, -1)
+                        self.steering_angle = self._steering_angle_temp * -1
                         cntTimer = time.perf_counter()
-                    
+
                     time.sleep(self.IF_FREQ)
 
                 while self._active and not self._line and not self._hindernis:
                     ir_result = self.get_ir_result()
                     if ir_result < 100:
                         self._line = True
-                        self.drive(self._tmpspeed,1)
+                        self.drive(self._tmpspeed, 1)
                         break
                     if not self._line and ((time.perf_counter() - cntTimer) > 0.8):
                         self._active = False
                         break
 
                     time.sleep(self.IF_FREQ)
-                
+
             while self._active and self._hindernis:
                 self.stop()
                 if (time.perf_counter() - self._cntHindernis) > 5:
                     self._active = False
                 time.sleep(self.US_FREQ)
             else:
-                self.drive(self._tmpspeed,1)
-
+                self.drive(self._tmpspeed, 1)
 
     def fp5(self, v=50):
         """Funktion für den Fahrparcour 5"""
@@ -720,6 +735,7 @@ class Datenlogger:
     Returns:
         [*json]: Messwerte aus uebergebenen Daten mit bliebigem Interval.
     """
+
     def __init__(self, log_file_path=None):
         """Zielverzeichnis fuer Logfiles kann beim Init mit uebergeben werden
             Wenn der Ordner nicht existiert wird er erzeugt
@@ -773,49 +789,55 @@ class Datenlogger:
 
 
 @click.command()
-@click.option('--modus', '--m', type=int, default=None, help="Startet Auswahl der Fahrzeug-Funktionen")
+@click.option(
+    "--modus",
+    "--m",
+    type=int,
+    default=None,
+    help="Startet Auswahl der Fahrzeug-Funktionen",
+)
 def main(modus):
-    '''
-        Main-Programm: Manuelles Ansteuern der implementierten Fahrparcours 1-7
+    """
+    Main-Programm: Manuelles Ansteuern der implementierten Fahrparcours 1-7
 
-        Args[Klassen]:
-                        PiCar.BaseCar()
-                        PiCar.Sonic()
-                        PiCar.SensorCar()
-        Funktionen der Klassen:
-                        fp1() - fp7()
-        Args[Fahrparcour]:
-                        v (int): Geschwindigkeit. Default 50
-    '''
+    Args[Klassen]:
+                    PiCar.BaseCar()
+                    PiCar.Sonic()
+                    PiCar.SensorCar()
+    Funktionen der Klassen:
+                    fp1() - fp7()
+    Args[Fahrparcour]:
+                    v (int): Geschwindigkeit. Default 50
+    """
 
-    print('-- Manuelle Auswahl der Fahrzeug-Funktionen --')
+    print("-- Manuelle Auswahl der Fahrzeug-Funktionen --")
     modi = {
-        0: 'Kalibrierung der IR-Sensoren',
-        1: 'Fahrparcour 1',
-        2: 'Fahrparcour 2',
-        3: 'Fahrparcour 3',
-        4: 'Fahrparcour 4',
-        5: 'Fahrparcour 5',
-        6: 'Fahrparcour 6',
-        7: 'Fahrparcour 7',
-        9: 'Ausgabe IR-Werte'
+        0: "Kalibrierung der IR-Sensoren",
+        1: "Fahrparcour 1",
+        2: "Fahrparcour 2",
+        3: "Fahrparcour 3",
+        4: "Fahrparcour 4",
+        5: "Fahrparcour 5",
+        6: "Fahrparcour 6",
+        7: "Fahrparcour 7",
+        9: "Ausgabe IR-Werte",
     }
-    warnung = 'ACHTUNG! Das Auto wird ein Stück fahren!\n Dücken Sie ENTER zum Start.'
+    warnung = "ACHTUNG! Das Auto wird ein Stück fahren!\n Dücken Sie ENTER zum Start."
 
     if modus == None:
-        print('--' * 20)
-        print('Auswahl:')
+        print("--" * 20)
+        print("Auswahl:")
         for m in modi.keys():
-            print('{i} - {name}'.format(i=m, name=modi[m]))
-        print('--' * 20)
+            print("{i} - {name}".format(i=m, name=modi[m]))
+        print("--" * 20)
 
     while modus == None:
-        modus = input('Wähle  (Andere Taste für Abbruch): ? ')
-        if modus in ['0', '1', '2', '3', '4', '5', '6', '7', '9']:
+        modus = input("Wähle  (Andere Taste für Abbruch): ? ")
+        if modus in ["0", "1", "2", "3", "4", "5", "6", "7", "9"]:
             break
         else:
             modus = None
-            print('Getroffene Auswahl nicht möglich.')
+            print("Getroffene Auswahl nicht möglich.")
             quit()
     modus = int(modus)
 
@@ -825,50 +847,50 @@ def main(modus):
 
     if modus == 1:
         x = input(warnung)
-        if x == '':
-            SensorCar().fp1() 
+        if x == "":
+            SensorCar().fp1()
         else:
             print("Abbruch")
 
     if modus == 2:
         x = input(warnung)
-        if x == '':
-            SensorCar().fp2() 
+        if x == "":
+            SensorCar().fp2()
         else:
             print("Abbruch")
-    
+
     if modus == 3:
         x = input(warnung)
-        if x == '':
-            SensorCar().fp3() 
+        if x == "":
+            SensorCar().fp3()
         else:
             print("Abbruch")
 
     if modus == 4:
         x = input(warnung)
-        if x == '':
-            SensorCar().fp4() 
+        if x == "":
+            SensorCar().fp4()
         else:
             print("Abbruch")
 
     if modus == 5:
         x = input(warnung)
-        if x == '':
-            SensorCar().fp5() 
+        if x == "":
+            SensorCar().fp5()
         else:
             print("Abbruch")
 
     if modus == 6:
         x = input(warnung)
-        if x == '':
-            SensorCar().fp6() 
+        if x == "":
+            SensorCar().fp6()
         else:
             print("Abbruch")
 
     if modus == 7:
         x = input(warnung)
-        if x == '':
-            SensorCar().fp7() 
+        if x == "":
+            SensorCar().fp7()
         else:
             print("Abbruch")
 

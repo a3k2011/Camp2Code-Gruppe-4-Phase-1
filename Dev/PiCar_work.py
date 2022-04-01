@@ -99,14 +99,26 @@ class BaseCar:
         self._steering_angle = 0
         self._speed = 0
         self._direction = 1
-        with open("config.json", "r") as f:
-            data = json.load(f)
-            turning_offset = data.get("turning_offset")
-            forward_A = data.get("forward_A")
-            forward_B = data.get("forward_B")
-            self._log_file_path = data.get("log_file_path")
-            if self._log_file_path == None:
-                self._log_file_path = "Folder"
+        data = {}
+        try:
+            with open("config.json", "r") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            with open("config.json", "w") as f:
+                data = {}
+                data["turning_offset"] = 0
+                data["forward_A"] = 0
+                data["forward_B"] = 0
+                data["log_file_path"] = "Logger"
+                json.dump(data, f)
+            print("Bitte config.json anpassen!")
+
+        turning_offset = data.get("turning_offset")
+        forward_A = data.get("forward_A")
+        forward_B = data.get("forward_B")
+        self._log_file_path = data.get("log_file_path")
+        if self._log_file_path == None:
+            self._log_file_path = "Folder"
 
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
