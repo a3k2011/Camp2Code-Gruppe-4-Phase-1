@@ -115,7 +115,10 @@ kpi_5 = dbc.Card([dbc.CardBody([html.H6("vm"), html.P(id="kpi5")])])
 
 row_joystick = dbc.Row(
     [
-        dbc.Col([html.P("Manuell on/off"), dbc.Switch(id="sw_manual")], width=4),
+        dbc.Col(
+            [html.P("Manuell on/off"), dbc.Switch(id="sw_manual")],
+            width=4,
+        ),
         dbc.Col(
             daq.Joystick(id="joystick", size=100, className="mb-3"),
             width=4,
@@ -130,19 +133,19 @@ row_joystick = dbc.Row(
 )
 CARD_ManuelleSteuerung = dbc.Card(
     [
-        dbc.Row(
-            [  # Titel Manuelle Steuerung
-                html.H3(
-                    id="label_test",
-                    children="Manuelle Steuerung",
-                    style={
-                        "textAlign": "left",
-                        "paddingTop": 20,
-                        "paddingBottom": 20,
-                    },
-                )
-            ]
-        ),
+        # dbc.Row(
+        #     [  # Titel Manuelle Steuerung
+        #         html.H3(
+        #             id="label_test",
+        #             children="Manuelle Steuerung",
+        #             style={
+        #                 "textAlign": "left",
+        #                 "paddingTop": 20,
+        #                 "paddingBottom": 20,
+        #             },
+        #         )
+        #     ]
+        # ),
         dbc.Row(
             [  # Slider Speed
                 dbc.Col([html.H6("max. speed:")], width=4),
@@ -159,12 +162,39 @@ CARD_ManuelleSteuerung = dbc.Card(
                     ],
                     width=8,
                 ),
-            ]
+            ],
+            style={"paddingTop": 20, "paddingBottom": 10, "paddinglLeft": 20},
         ),
         row_joystick,
-    ],
+    ]
 )
 
+CARD_CALIBRATION = dbc.Card(id="card_calibration", children="comming soon ...")
+
+TAB_FZG = dcc.Tabs(
+    id="tab_fzg",
+    value="Manuelle Steuerung",
+    children=[
+        dcc.Tab(
+            id="tab_control",
+            value="Manuelle Steuerung",
+            label="Manuelle Steuerung",
+            children=[
+                CARD_ManuelleSteuerung,
+            ],
+            style={"color": "grey"},
+        ),
+        dcc.Tab(
+            id="tab_calibration",
+            value="Kalibrierung PiCar",
+            label="Kalibrierung PiCar",
+            children=[
+                CARD_CALIBRATION,
+            ],
+            style={"color": "grey"},
+        ),
+    ],
+)
 COL_Logfiles = [
     dbc.Row(
         [
@@ -275,7 +305,7 @@ COL_Fahrzeugsteuerung = [  # Col Fahrzeugsteuerung
     ),
     dbc.Row(
         [
-            CARD_ManuelleSteuerung,
+            TAB_FZG,
         ]
     ),
 ]
@@ -347,6 +377,12 @@ app.layout = dbc.Container(
         ),  # Row 3
     ]
 )
+
+
+@app.callback(Output("dummy", "children"), Input("interval_startup", "n_intervals"))
+def welcome_scene(value):
+    car.welcome()
+    return ""
 
 
 @app.callback(

@@ -4,31 +4,14 @@ from curses.ascii import isdigit
 from datetime import datetime
 import os, json, time
 
-angle_from_sensor = {
-    0: 100,
-    1: -40,
-    3: -32,
-    2: -18,
-    7: -18,
-    6: -8,
-    4: 0,
-    14: 0,
-    12: 8,
-    8: 18,
-    28: 18,
-    24: 32,
-    16: 40,
-    31: 100,
-}
-lookup = np.array([1, 2, 4, 8, 16])
-# ir_sensor_digital = [0,1,1,0,0]
-# winkel = angle_from_sensor.get(ir_sensor_digital*lookup.sum()) #wenn unbekannt kommt "None" zurück
-
 
 fp_allowed = False
 
 STEERINGE_ANGLE_MAX = 45
 IR_MARK = 0.7
+
+IR_NO_LINE = 100
+IR_INVALID = 101
 
 
 class Datenlogger:
@@ -123,6 +106,14 @@ class BaseCar:
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
         self._dl = Datenlogger(log_file_path=self._log_file_path)
+
+    def welcome(self):
+        time.sleep(0.2)
+        self.steering_angle = -45
+        time.sleep(0.4)
+        self.steering_angle = 45
+        time.sleep(0.4)
+        self.steering_angle = 0
 
     def logger_start(self):
         """startet die Aufzeichnung des Log-Files"""
@@ -242,7 +233,7 @@ class SonicCar(BaseCar):
             _type_: _description_
         """
         self._us_distance = self.us.distance()
-        if self._us_distance > 150:  # Wert nicht relevant
+        if self._us_distance > 150:  # Werte nicht relevant
             self._us_distance = -5
         return self._us_distance
 
@@ -271,9 +262,7 @@ class SensorCar(SonicCar):
         super().__init__()
         self.ir = basisklassen.Infrared()
         self._ir_sensors = [0] * 5
-        self._steering_soll = [
-            0
-        ] * filter_deepth  # nur für Filter nötig. Filter deaktiviert in angle_from_ir()
+        self._steering_soll = [0] * filter_deepth
         self._ir_calib = None
         with open("config.json", "r") as f:
             data = json.load(f)
@@ -282,6 +271,26 @@ class SensorCar(SonicCar):
                 self._ir_calib = ir_calib
             else:
                 self._ir_calib = [1, 1, 1, 1, 1]
+        self.angle_from_sensor = {
+            0: IR_NO_LINE,
+            1: -40,
+            3: -32,
+            2: -18,
+            7: -18,
+            6: -8,
+            4: 0,
+            14: 0,
+            12: 8,
+            8: 18,
+            28: 18,
+            24: 32,
+            16: 40,
+            31: IR_NO_LINE,
+        }
+        self.lookup = np.array([1, 2, 4, 8, 16])
+        # ir_sensor_digital = [0,1,1,0,0]
+        # winkel den die Lenkung stellen muss um zur Linie zu kommen:
+        # winkel = angle_from_sensor.get(ir_sensor_digital*lookup.sum()) #wenn unbekannt kommt "None" zurück
 
     @property
     def ir_sensor_analog(self):
@@ -364,16 +373,16 @@ class SensorCar(SonicCar):
 
         Returns:
             int: Soll-Lenkeinschlag
-            Wert 100: keine Linie erkannt
-            Wert 101: undefinierter Wert
+            Wert 100: keine Linie erkannt -> IR_NO_LINE
+            Wert 101: undefinierter Wert -> IR_INVALID
         """
         ir_data = np.array(self.ir_sensor_analog)
         compValue = IR_MARK * ir_data.max()
         sd = np.where(ir_data < compValue, 1, 0)
-        lookupValue = (lookup * sd).sum()
-        ir_result = angle_from_sensor.get(lookupValue)
+        lookupValue = (self.lookup * sd).sum()
+        ir_result = self.angle_from_sensor.get(lookupValue)
         if ir_result == None:
-            return 101  # undefinierter Wert
+            return IR_INVALID  # undefinierter Wert
         else:
             #  return ir_result
             if ir_result < 100:
@@ -382,7 +391,7 @@ class SensorCar(SonicCar):
                 ir_out = np.mean(self._steering_soll)
                 return ir_out
             else:
-                return 100
+                return IR_NO_LINE
 
     def get_and_log_drive_data(self):
         """Rückgabe der Fahr- und Sensordaten
@@ -550,10 +559,10 @@ def fahrparcour(car: SensorCar, pos):
             ir_sens = car_data[4:9]
             st_angle = car.angle_from_ir()
 
-            if st_angle == 101:
+            if st_angle == IR_INVALID:
                 pass
                 # print("invalid result") # nur zu Debug-Zwecken aktivieren
-            if st_angle == 100:
+            if st_angle == IR_NO_LINE:
                 print("STOP gefunden")
                 if not ignore_stop:
                     break
@@ -576,7 +585,7 @@ def fahrparcour(car: SensorCar, pos):
         ignore_stop = 0.25 / time_period
         last_angle = 0
         drive_reverse = 0
-        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
+        time_drive_reverse = 1  # max. Zeit für Rückwärtsfahrt
         counter_reverse = time_drive_reverse / time_period
         while counter_stop < (time_run / time_period) and fp_allowed:
             if ignore_stop > 0:
@@ -584,9 +593,9 @@ def fahrparcour(car: SensorCar, pos):
             st_angle = car.angle_from_ir()
             if not drive_reverse:
                 car_data = car.get_and_log_drive_data()
-                if st_angle == 101:
+                if st_angle == IR_INVALID:
                     print("invalid result")
-                if st_angle == 100 and not ignore_stop:
+                if st_angle == IR_NO_LINE and not ignore_stop:
                     if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
                         drive_reverse = 1
                         counter_reverse = time_drive_reverse / time_period
@@ -605,7 +614,7 @@ def fahrparcour(car: SensorCar, pos):
                     counter_reverse -= 1
                     car.steering_angle = 0 - last_angle
                     car.drive(35, -1)
-                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
+                    if abs(st_angle) < 20:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
                         drive_reverse = 0
                 else:
@@ -629,7 +638,7 @@ def fahrparcour(car: SensorCar, pos):
         last_angle = 0
         drive_reverse = 0
         us_flag = False
-        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
+        time_drive_reverse = 1  # max. Zeit für Rückwärtsfahrt
         us_distance = 150
         counter_reverse = time_drive_reverse / time_period
         while counter_stop < (time_run / time_period) and fp_allowed:
@@ -648,9 +657,9 @@ def fahrparcour(car: SensorCar, pos):
                     print("US-Distanz zu gering --> STOP")
                     # break
                 else:
-                    if st_angle == 101:
+                    if st_angle == IR_INVALID:
                         print("invalid result")
-                    if st_angle == 100 and not ignore_stop:
+                    if st_angle == IR_NO_LINE and not ignore_stop:
                         if abs(last_angle) >= 20:  # war ausserhalb des Bereichs
                             drive_reverse = 1
                             counter_reverse = time_drive_reverse / time_period
@@ -669,7 +678,7 @@ def fahrparcour(car: SensorCar, pos):
                     counter_reverse -= 1
                     car.steering_angle = 0 - last_angle
                     car.drive(35, -1)
-                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
+                    if abs(st_angle) < 20:  # Linie wieder unter Mitte des PiCar
                         car.drive(0, 0)
                         drive_reverse = 0
                 else:
