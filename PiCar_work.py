@@ -21,6 +21,10 @@ angle_from_sensor = {
     31: 100,
 }
 lookup = np.array([1, 2, 4, 8, 16])
+# ir_sensor_digital = [0,1,1,0,0]
+# winkel = angle_from_sensor.get(ir_sensor_digital*lookup.sum()) #wenn unbekannt kommt "None" zurück
+
+
 fp_allowed = False
 
 STEERINGE_ANGLE_MAX = 45
@@ -83,320 +87,6 @@ class Datenlogger:
             self._log_file.clear()
             self._log_data.clear()
             print("Log-File saved to:", logfile)
-
-
-def driveCar(car, speed, direction, angle, duration):
-    """Hilfsfunktion um des PiCar für eine definierte Zeit mit vorgegebenen Parametern zu fahren
-
-    Args:
-        car (PiCar): Eine Instanz eines PiCar
-        speed (int): Geschwindigkeit in %
-        direction (int): Fahrtrichtung
-        angle (int): Lenkwinkel
-        duration (int): Fahrdauer
-    """
-    global fp_allowed
-    i = 0
-    while fp_allowed and (i < (10 * duration)):
-        car.steering_angle = angle
-        car.drive(speed, direction)
-        car.drive_data
-        time.sleep(0.1)
-        i += 1
-    car.stop()
-
-
-def fahrparcours_stop():
-    """Abbruch des laufenden Fahrprogramms"""
-    global fp_allowed
-    fp_allowed = False
-
-
-def fahrparcour(car, pos):
-    """Fahrparcours abspielen
-
-    Args:
-        car (PiCar): eine Instanz des PiCar
-        pos (int): die Nummer des gewünschten Parcours
-    """
-    global fp_allowed
-    fp_allowed = True
-    if pos == 1:
-        print("Fahrparcours 1 gewaehlt:")
-        print("3 Sekunden gerade vor")
-        counter = 0
-        state = 0
-        while fp_allowed:
-            car.drive_data
-            if state == 0:
-                counter = 30
-                car.drive(40, 1)
-                car.steering_angle = 0
-                state = 1
-            elif state == 1:
-                if counter > 0:
-                    counter -= 1
-                else:
-                    print("eine Sekunde Pause")
-                    counter = 10
-                    car.drive(0, 0)
-                    state = 2
-            elif state == 2:
-                if counter > 0:
-                    counter -= 1
-                else:
-                    print("3 Sekunden gerade zurueck")
-                    counter = 30
-                    car.drive(40, -1)
-                    car.steering_angle = 0
-                    state = 3
-            elif state == 3:
-                if counter > 0:
-                    counter -= 1
-                else:
-                    counter = 0
-                    car.drive(0, 0)
-                    break
-            time.sleep(0.1)
-
-    elif pos == 2:
-        print("Fahrparcours 2 gewaehlt:")
-        print("2 Sekunden gerade vor")
-        driveCar(car, 40, 1, 0, 2)
-        print("8 Sekunden vorwarts links herum")
-        driveCar(car, 45, 1, -45, 8)
-        print("1 Sekunde Pause")
-        driveCar(car, 0, 0, 0, 1)
-        print("8 Sekunden rueckwarts links herum")
-        driveCar(car, 45, -1, -45, 8)
-        print("2 Sekunden gerade zurueck")
-        driveCar(car, 40, -1, 0, 2)
-        car.stop()
-        print()
-
-    elif pos == 3:
-        print("Fahrparcours 3 gewaehlt:")
-        print("gerade vor bis Abstand < x")
-        max_time = 200
-        drive_time = 0
-        distance = car.drive_data[3]
-        while fp_allowed:
-            while (distance > 20 or distance < 5) and drive_time < max_time:
-                car.steering_angle = 0
-                car.drive(40, 1)
-                time.sleep(0.1)
-                distance = car.drive_data[3]
-                print("Abstand:", distance)
-                drive_time += 1
-            car.stop()
-        car.stop()
-
-    elif pos == 4:
-        print("Erkundungsfahrt:")
-        max_time = 1000  # 100s
-        drive_time = 0
-        while fp_allowed:
-            for i in range(10):
-                print("Fahrt:", i + 1)
-                distance = car.drive_data[3]
-                while (distance > 25 or distance < 1) and drive_time < max_time:
-                    car.steering_angle = 0
-                    car.drive(40, 1)
-                    time.sleep(0.1)
-                    distance = car.drive_data[3]
-                    print("Abstand:", distance)
-                    drive_time += 1
-                car.stop()
-                print("zuruecksetzen")
-                car.steering_angle = 45
-                car.drive(40, -1)
-                time.sleep(2)
-                car.stop()
-                car.steering_angle = 0
-        car.stop()
-
-    elif pos == 5:
-        print("Line Follower")
-        speed_limit = 100
-        speed_soll = 40
-        counter_stop = 0
-        time_period = 0.01
-        time_run = 25  # Sekunden
-        ignore_stop = 0.25 / time_period
-        while counter_stop < (time_run / time_period) and fp_allowed:
-            if ignore_stop > 0:
-                ignore_stop -= 1
-            car_data = car.drive_data
-            ir_sens = car_data[4:9]
-            st_angle = car.angle_from_ir()
-
-            if st_angle == 101:
-                print("invalid result")
-            if st_angle == 100:
-                print("STOP gefunden")
-                if not ignore_stop:
-                    break
-            else:
-                car.steering_angle = st_angle
-            car.drive(speed_soll, 1)
-            time.sleep(time_period)
-            counter_stop += 1
-        car.stop()
-        car.steering_angle = 0
-        print("Ende der Strecke")
-
-    elif pos == 6:
-        print("Line Follower enge Kurve")
-        speed_limit = 100
-        speed_soll = 40
-        counter_stop = 0
-        time_period = 0.01
-        time_run = 25  # Sekunden
-        ignore_stop = 0.25 / time_period
-        last_angle = 0
-        drive_reverse = 0
-        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
-        counter_reverse = time_drive_reverse / time_period
-        while counter_stop < (time_run / time_period) and fp_allowed:
-            if ignore_stop > 0:
-                ignore_stop -= 1
-            st_angle = car.angle_from_ir()
-            if not drive_reverse:
-                car_data = car.drive_data
-                if st_angle == 101:
-                    print("invalid result")
-                if st_angle == 100 and not ignore_stop:
-                    if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
-                        drive_reverse = 1
-                        counter_reverse = time_drive_reverse / time_period
-                        car.drive(0, 0)
-                    else:
-                        print("STOP gefunden")
-                        if not ignore_stop:
-                            break
-                else:
-                    car.steering_angle = st_angle
-                    car.drive(speed_soll, 1)
-                    last_angle = st_angle
-
-            else:  # Rückwärtsfahrt
-                if counter_reverse > 0:
-                    counter_reverse -= 1
-                    car.steering_angle = 0 - last_angle
-                    car.drive(35, -1)
-                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
-                        car.drive(0, 0)
-                        drive_reverse = 0
-                else:
-                    car.drive(0, 0)
-                    drive_reverse = 0
-
-            time.sleep(time_period)
-            counter_stop += 1
-        car.stop()
-        car.steering_angle = 0
-        print("Ende der Strecke")
-
-    elif pos == 7:
-        print("Line Follower mit US")
-        speed_limit = 100
-        speed_soll = 40
-        counter_stop = 0
-        time_period = 0.01
-        time_run = 25  # Sekunden
-        ignore_stop = 0.25 / time_period
-        last_angle = 0
-        drive_reverse = 0
-        us_flag = False
-        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
-        us_distance = 150
-        counter_reverse = time_drive_reverse / time_period
-        while counter_stop < (time_run / time_period) and fp_allowed:
-            if ignore_stop > 0:
-                ignore_stop -= 1
-            car_data = car.drive_data
-            us_distance = car_data[3]
-            if us_flag and us_distance > 25:
-                us_flag = False
-
-            st_angle = car.angle_from_ir()
-            if not drive_reverse:
-                if us_flag or (us_distance < 15 and us_distance > 0):
-                    us_flag = True
-                    car.stop()
-                    print("US-Distanz zu gering --> STOP")
-                    # break
-                else:
-                    if st_angle == 101:
-                        print("invalid result")
-                    if st_angle == 100 and not ignore_stop:
-                        if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
-                            drive_reverse = 1
-                            counter_reverse = time_drive_reverse / time_period
-                            car.drive(0, 0)
-                        else:
-                            print("STOP gefunden")
-                            if not ignore_stop:
-                                break
-                    else:
-                        car.steering_angle = st_angle
-                        car.drive(speed_soll, 1)
-                        last_angle = st_angle
-
-            else:  # Rückwärtsfahrt
-                if counter_reverse > 0:
-                    counter_reverse -= 1
-                    car.steering_angle = 0 - last_angle
-                    car.drive(35, -1)
-                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
-                        car.drive(0, 0)
-                        drive_reverse = 0
-                else:
-                    car.drive(0, 0)
-                    drive_reverse = 0
-
-            time.sleep(time_period)
-            counter_stop += 1
-        car.stop()
-        car.steering_angle = 0
-        print("Ende der Strecke")
-
-    elif pos == 8:
-        i = 0
-        counts = 0
-        print("Datenaufzeichnung IR Sensoren")
-        car.stop()
-        duration = 3  # Sekunden
-        mps = 10
-        user_in = input("Messungen pro Sekunde:")
-        try:
-            mps = int(user_in)
-        except:
-            print("das war keine Zahl!")
-
-        user_in = input("Messdauer in Sekunden:")
-        try:
-            duration = int(user_in)
-        except:
-            print("das war keine Zahl!")
-        counts = mps * duration
-        while i < counts and fp_allowed:
-            a = car.drive_data
-            print("IR-Sensors:", a[4:10], "US-Sensor:", a[3])
-            time.sleep(1 / mps)
-            i += 1
-        print()
-
-    elif pos == 9:
-        print("Fahrparcours 9 gewaehlt:")
-        print("gerade zuruecksetzen")
-        driveCar(50, -1, 0, 2)
-        car.stop()
-        print()
-
-    else:
-        print("Fahrparcours", pos, "nicht bekannt!")
-    car.us.stop()
 
 
 class BaseCar:
@@ -506,7 +196,18 @@ class BaseCar:
             self.stop()
 
     def stop(self):
+        """Anhalten des PiCar"""
         self.bw.stop()
+
+    def get_and_log_drive_data(self):
+        """Rückgabe der Fahr- und Sensordaten
+
+        Returns:
+            list: [Geschwindigkeit, Fahrtrichtung, Lenkwinkel, US-Distanz]
+        """
+        data = [self._speed, self._direction, self._steering_angle]
+        self.logger_log(data)
+        return data
 
 
 class SonicCar(BaseCar):
@@ -533,14 +234,15 @@ class SonicCar(BaseCar):
             self._us_distance = -5
         return self._us_distance
 
-    @property
-    def drive_data(self):
+    def get_and_log_drive_data(self):
         """Rückgabe der Fahr- und Sensordaten
 
         Returns:
             list: [Geschwindigkeit, Fahrtrichtung, Lenkwinkel, US-Distanz]
         """
-        return [self.speed, self.direction, self.steering_angle, self.distance]
+        data = [self._speed, self._direction, self._steering_angle, self._us_distance]
+        self.logger_log(data)
+        return data
 
     def usstop(self):
         self.us.stop()
@@ -556,8 +258,10 @@ class SensorCar(SonicCar):
     def __init__(self, filter_deepth: int = 2):
         super().__init__()
         self.ir = basisklassen.Infrared()
-        self._ir_sensors = self.ir.read_analog()
-        self._steering_soll = [0] * filter_deepth
+        self._ir_sensors = [0] * 5
+        self._steering_soll = [
+            0
+        ] * filter_deepth  # nur für Filter nötig. Filter deaktiviert in angle_from_ir()
         self._ir_calib = None
         with open("config.json", "r") as f:
             data = json.load(f)
@@ -576,7 +280,7 @@ class SensorCar(SonicCar):
         """
         # self._ir_sensors = self.ir.read_analog()
         self._ir_sensors = (
-            (self.ir.get_average(10) * np.array(self._ir_calib)).round(2).tolist()
+            (self.ir.get_average(2) * np.array(self._ir_calib)).round(2).tolist()
         )
         return self._ir_sensors
 
@@ -631,19 +335,19 @@ class SensorCar(SonicCar):
         sd = np.where(ir_data < compValue, 1, 0)
         lookupValue = (lookup * sd).sum()
         ir_result = angle_from_sensor.get(lookupValue)
-        if ir_result != None:
+        if ir_result == None:
+            return 101  # undefinierter Wert
+        else:
+            #  return ir_result
             if ir_result < 100:
                 self._steering_soll = self._steering_soll[1:]
                 self._steering_soll.append(ir_result)
                 ir_out = np.mean(self._steering_soll)
+                return ir_out
             else:
-                ir_out = 100
-            return ir_out
-        else:
-            return 101
+                return 100
 
-    @property
-    def drive_data(self):
+    def get_and_log_drive_data(self):
         """Rückgabe der Fahr- und Sensordaten
 
         Returns:
@@ -653,11 +357,330 @@ class SensorCar(SonicCar):
             self._speed,
             self._direction,
             self._steering_angle,
-            self.distance,
-        ] + self.ir_sensor_analog
+            self._us_distance,
+        ] + self._ir_sensors
 
         self.logger_log(data)
         return data
+
+
+def driveCar(car: SensorCar, speed, direction, angle, duration):
+    """Hilfsfunktion um des PiCar für eine definierte Zeit mit vorgegebenen Parametern zu fahren
+
+    Args:
+        car (PiCar): Eine Instanz eines PiCar
+        speed (int): Geschwindigkeit in %
+        direction (int): Fahrtrichtung
+        angle (int): Lenkwinkel
+        duration (int): Fahrdauer
+    """
+    global fp_allowed
+    i = 0
+    while fp_allowed and (i < (10 * duration)):
+        car.steering_angle = angle
+        car.drive(speed, direction)
+        car.get_and_log_drive_data()
+        time.sleep(0.1)
+        i += 1
+    car.stop()
+
+
+def fahrparcours_stop():
+    """Abbruch des laufenden Fahrprogramms"""
+    global fp_allowed
+    fp_allowed = False
+
+
+def fahrparcour(car: SensorCar, pos):
+    """Fahrparcours abspielen
+
+    Args:
+        car (PiCar): eine Instanz des PiCar
+        pos (int): die Nummer des gewünschten Parcours
+    """
+    global fp_allowed
+    fp_allowed = True
+    if pos == 1:
+        print("Fahrparcours 1 gewaehlt:")
+        print("3 Sekunden gerade vor")
+        counter = 0
+        state = 0
+        while fp_allowed:
+            car.get_and_log_drive_data()
+            if state == 0:
+                counter = 30
+                car.drive(40, 1)
+                car.steering_angle = 0
+                state = 1
+            elif state == 1:
+                if counter > 0:
+                    counter -= 1
+                else:
+                    print("eine Sekunde Pause")
+                    counter = 10
+                    car.drive(0, 0)
+                    state = 2
+            elif state == 2:
+                if counter > 0:
+                    counter -= 1
+                else:
+                    print("3 Sekunden gerade zurueck")
+                    counter = 30
+                    car.drive(40, -1)
+                    car.steering_angle = 0
+                    state = 3
+            elif state == 3:
+                if counter > 0:
+                    counter -= 1
+                else:
+                    counter = 0
+                    car.drive(0, 0)
+                    break
+            time.sleep(0.1)
+
+    elif pos == 2:
+        print("Fahrparcours 2 gewaehlt:")
+        print("2 Sekunden gerade vor")
+        driveCar(car, 40, 1, 0, 2)
+        print("8 Sekunden vorwarts links herum")
+        driveCar(car, 45, 1, -45, 8)
+        print("1 Sekunde Pause")
+        driveCar(car, 0, 0, 0, 1)
+        print("8 Sekunden rueckwarts links herum")
+        driveCar(car, 45, -1, -45, 8)
+        print("2 Sekunden gerade zurueck")
+        driveCar(car, 40, -1, 0, 2)
+        car.stop()
+        print()
+
+    elif pos == 3:
+        print("Fahrparcours 3 gewaehlt:")
+        print("gerade vor bis Abstand < x")
+        max_time = 200
+        drive_time = 0
+        distance = car.distance
+        car.get_and_log_drive_data()
+        while fp_allowed:
+            while (distance > 20 or distance < 5) and drive_time < max_time:
+                car.steering_angle = 0
+                car.drive(40, 1)
+                time.sleep(0.1)
+                distance = car.distance
+                car.get_and_log_drive_data()
+                print("Abstand:", distance)
+                drive_time += 1
+            car.stop()
+        car.stop()
+
+    elif pos == 4:
+        print("Erkundungsfahrt:")
+        max_time = 1000  # 100s
+        drive_time = 0
+        while fp_allowed:
+            for i in range(10):
+                print("Fahrt:", i + 1)
+                distance = car.distance
+                car.get_and_log_drive_data()
+                while (distance > 25 or distance < 1) and drive_time < max_time:
+                    car.steering_angle = 0
+                    car.drive(40, 1)
+                    time.sleep(0.1)
+                    distance = car.distance
+                    car.get_and_log_drive_data()
+                    print("Abstand:", distance)
+                    drive_time += 1
+                car.stop()
+                print("zuruecksetzen")
+                car.steering_angle = 45
+                car.drive(40, -1)
+                time.sleep(2)
+                car.stop()
+                car.steering_angle = 0
+        car.stop()
+
+    elif pos == 5:
+        print("Line Follower")
+        speed_limit = 100
+        speed_soll = 40
+        counter_stop = 0
+        time_period = 0.01
+        time_run = 25  # Sekunden
+        ignore_stop = 0.25 / time_period
+        while counter_stop < (time_run / time_period) and fp_allowed:
+            if ignore_stop > 0:
+                ignore_stop -= 1
+            car_data = car.get_and_log_drive_data()
+            ir_sens = car_data[4:9]
+            st_angle = car.angle_from_ir()
+
+            if st_angle == 101:
+                pass
+                # print("invalid result") # nur zu Debug-Zwecken aktivieren
+            if st_angle == 100:
+                print("STOP gefunden")
+                if not ignore_stop:
+                    break
+            else:
+                car.steering_angle = st_angle
+            car.drive(speed_soll, 1)
+            time.sleep(time_period)
+            counter_stop += 1
+        car.stop()
+        car.steering_angle = 0
+        print("Ende der Strecke")
+
+    elif pos == 6:
+        print("Line Follower enge Kurve")
+        speed_limit = 100
+        speed_soll = 40
+        counter_stop = 0
+        time_period = 0.01
+        time_run = 25  # Sekunden
+        ignore_stop = 0.25 / time_period
+        last_angle = 0
+        drive_reverse = 0
+        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
+        counter_reverse = time_drive_reverse / time_period
+        while counter_stop < (time_run / time_period) and fp_allowed:
+            if ignore_stop > 0:
+                ignore_stop -= 1
+            st_angle = car.angle_from_ir()
+            if not drive_reverse:
+                car_data = car.get_and_log_drive_data()
+                if st_angle == 101:
+                    print("invalid result")
+                if st_angle == 100 and not ignore_stop:
+                    if abs(last_angle) >= 30:  # war ausserhalb des Bereichs
+                        drive_reverse = 1
+                        counter_reverse = time_drive_reverse / time_period
+                        car.drive(0, 0)
+                    else:
+                        print("STOP gefunden")
+                        if not ignore_stop:
+                            break
+                else:
+                    car.steering_angle = st_angle
+                    car.drive(speed_soll, 1)
+                    last_angle = st_angle
+
+            else:  # Rückwärtsfahrt
+                if counter_reverse > 0:
+                    counter_reverse -= 1
+                    car.steering_angle = 0 - last_angle
+                    car.drive(35, -1)
+                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
+                        car.drive(0, 0)
+                        drive_reverse = 0
+                else:
+                    car.drive(0, 0)
+                    drive_reverse = 0
+
+            time.sleep(time_period)
+            counter_stop += 1
+        car.stop()
+        car.steering_angle = 0
+        print("Ende der Strecke")
+
+    elif pos == 7:
+        print("Line Follower mit US")
+        speed_limit = 100
+        speed_soll = 40
+        counter_stop = 0
+        time_period = 0.01
+        time_run = 25  # Sekunden
+        ignore_stop = 0.25 / time_period
+        last_angle = 0
+        drive_reverse = 0
+        us_flag = False
+        time_drive_reverse = 0.8  # max. Zeit für Rückwärtsfahrt
+        us_distance = 150
+        counter_reverse = time_drive_reverse / time_period
+        while counter_stop < (time_run / time_period) and fp_allowed:
+            if ignore_stop > 0:
+                ignore_stop -= 1
+            us_distance = car.distance
+            st_angle = car.angle_from_ir()
+            car_data = car.get_and_log_drive_data()
+            if us_flag and us_distance > 25:
+                us_flag = False
+
+            if not drive_reverse:
+                if us_flag or (us_distance < 15 and us_distance > 0):
+                    us_flag = True
+                    car.stop()
+                    print("US-Distanz zu gering --> STOP")
+                    # break
+                else:
+                    if st_angle == 101:
+                        print("invalid result")
+                    if st_angle == 100 and not ignore_stop:
+                        if abs(last_angle) >= 20:  # war ausserhalb des Bereichs
+                            drive_reverse = 1
+                            counter_reverse = time_drive_reverse / time_period
+                            car.drive(0, 0)
+                        else:
+                            print("STOP gefunden")
+                            if not ignore_stop:
+                                break
+                    else:
+                        car.steering_angle = st_angle
+                        car.drive(speed_soll, 1)
+                        last_angle = st_angle
+
+            else:  # Rückwärtsfahrt
+                if counter_reverse > 0:
+                    counter_reverse -= 1
+                    car.steering_angle = 0 - last_angle
+                    car.drive(35, -1)
+                    if abs(st_angle) < 30:  # Linie wieder unter Mitte des PiCar
+                        car.drive(0, 0)
+                        drive_reverse = 0
+                else:
+                    car.drive(0, 0)
+                    drive_reverse = 0
+
+            time.sleep(time_period)
+            counter_stop += 1
+        car.stop()
+        car.steering_angle = 0
+        print("Ende der Strecke")
+
+    elif pos == 8:
+        i = 0
+        counts = 0
+        print("Datenaufzeichnung IR Sensoren")
+        car.stop()
+        duration = 3  # Sekunden
+        mps = 10
+        user_in = input("Messungen pro Sekunde:")
+        try:
+            mps = int(user_in)
+        except:
+            print("das war keine Zahl!")
+
+        user_in = input("Messdauer in Sekunden:")
+        try:
+            duration = int(user_in)
+        except:
+            print("das war keine Zahl!")
+        counts = mps * duration
+        while i < counts and fp_allowed:
+            a = car.get_and_log_drive_data()
+            print("IR-Sensors:", a[4:10], "US-Sensor:", a[3])
+            time.sleep(1 / mps)
+            i += 1
+        print()
+
+    elif pos == 9:
+        print("Fahrparcours 9 gewaehlt:")
+        print("gerade zuruecksetzen")
+        driveCar(50, -1, 0, 2)
+        car.stop()
+        print()
+
+    else:
+        print("Fahrparcours", pos, "nicht bekannt!")
+    car.us.stop()
 
 
 def main():
