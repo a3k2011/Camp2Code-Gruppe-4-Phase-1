@@ -118,7 +118,7 @@ class BaseCar:
         forward_B = data.get("forward_B")
         self._log_file_path = data.get("log_file_path")
         if self._log_file_path == None:
-            self._log_file_path = "Folder"
+            self._log_file_path = "Logger"
 
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
@@ -296,43 +296,68 @@ class SensorCar(SonicCar):
         )
         return self._ir_sensors
 
-    def calibrate_ir_sensors(self):
+    def calibrate_ir_sensors(self, fromDash: bool = False, menu_point=0):
         """Kalibrierung der einzelnen IR-Sensoren damit die Ergebnise vergleichbar werden
         Die Kalibrier-Werte werden in der config.json mit abgelegt.
         """
-        while True:
-            print("-" * 13, "IR Sensor Kalibrierung", "-" * 13)
-            print()
-            input("Sensoren auf hellem Untergrund platzieren, dann Taste drücken")
-            a = self.ir.get_average(100)
-            print("Messergebnis:", a)
-            user_in = input("Ergebnis verwenden? (j/n/q)")
-            if user_in == "n":
-                print("Neue Messung")
-            elif user_in == "j":
+        if fromDash:
+            if menu_point == 0:
+                return "Sensor auf hellem Untergrund plazieren"
+            if menu_point == 1:
+                a = self.ir.get_average(100)
+                return f"Messergebnis: {a}"
+            if menu_point == 2:
                 messung = np.array(a)
                 ir_calib = messung.mean() / messung
                 self._ir_calib = ir_calib.round(4)
-                print("Kalibrierwerte:", self._ir_calib)
                 data = {}
                 try:
                     with open("config.json", "r") as f:
                         data = json.load(f)
                 except:
-                    print("File error read")
+                    return "File read Error!"
                 data["ir_calib"] = self._ir_calib.tolist()
                 try:
                     with open("config.json", "w") as f:
                         json.dump(data, f)
+                    return f"Kalibrierwerte {self._ir_calib} gespeichert"
                 except:
-                    print("File error write")
-                break
-            else:
-                print("Abbruch durch Beutzer")
-                break
-        print("IR Kalibrierung beendet")
-        print("_" * 50)
-        print()
+                    return "File write Error"
+
+        else:
+            while True:
+                print("-" * 13, "IR Sensor Kalibrierung", "-" * 13)
+                print()
+                input("Sensoren auf hellem Untergrund platzieren, dann Taste drücken")
+                a = self.ir.get_average(100)
+                print("Messergebnis:", a)
+                user_in = input("Ergebnis verwenden? (j/n/q)")
+                if user_in == "n":
+                    print("Neue Messung")
+                elif user_in == "j":
+                    messung = np.array(a)
+                    ir_calib = messung.mean() / messung
+                    self._ir_calib = ir_calib.round(4)
+                    print("Kalibrierwerte:", self._ir_calib)
+                    data = {}
+                    try:
+                        with open("config.json", "r") as f:
+                            data = json.load(f)
+                    except:
+                        print("File error read")
+                    data["ir_calib"] = self._ir_calib.tolist()
+                    try:
+                        with open("config.json", "w") as f:
+                            json.dump(data, f)
+                    except:
+                        print("File error write")
+                    break
+                else:
+                    print("Abbruch durch Beutzer")
+                    break
+            print("IR Kalibrierung beendet")
+            print("_" * 50)
+            print()
 
     def angle_from_ir(self):
         """berechnet den Soll-Lenkeinschlag damit das Fahrzeug der Linie folgen kann

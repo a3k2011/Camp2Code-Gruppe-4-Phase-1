@@ -72,7 +72,7 @@ class BaseCar:
         forward_B = data.get("forward_B")
         self._log_file_path = data.get("log_file_path")
         if self._log_file_path == None:
-            self._log_file_path = "Folder"
+            self._log_file_path = "Logger"
 
         self.fw = basisklassen.Front_Wheels(turning_offset=turning_offset)
         self.bw = basisklassen.Back_Wheels(forward_A=forward_A, forward_B=forward_B)
