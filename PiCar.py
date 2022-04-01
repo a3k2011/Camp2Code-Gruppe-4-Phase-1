@@ -574,7 +574,9 @@ class SensorCar(Sonic):
                     self._line = True
                     self.drive(self._tmpspeed, 1)
                     break
-                if not self._line and ((time.perf_counter() - cntTimer) > 0.8):
+                if not self._line and (
+                    self._steering_angle_temp < 20
+                ):  # ((time.perf_counter() - cntTimer) > 0.8):
                     self._active = False
                     break
 
