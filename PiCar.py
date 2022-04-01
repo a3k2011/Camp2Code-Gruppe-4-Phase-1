@@ -273,7 +273,7 @@ class Sonic(BaseCar):
         US_OFFSET (float): Offset fuer den US-Sensor bis zur Erkennung eines Hindernisses.
     """
 
-    US_FREQ = 0.1
+    US_FREQ = 0.05
     US_OFFSET = 20
 
     def __init__(self):
@@ -305,8 +305,11 @@ class Sonic(BaseCar):
         while self._active:
             if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
                 self._hindernis = True
-            else:
-                time.sleep(self.US_FREQ)
+                self._cntHindernis = time.perf_counter()
+            if self._hindernis == True and (self.distance - self.US_OFFSET) > 0:
+                self._hindernis = False
+
+            time.sleep(self.US_FREQ)
 
     def inputWorker(self):
         """Funktion zur Interaktion mit Nutzer mit Multi-Threading.
@@ -348,8 +351,6 @@ class Sonic(BaseCar):
 
                 self.steering_angle = 0
                 self.drive(self._tmpspeed, 1)
-
-                self._hindernis = False
 
     @property
     def distance(self):
@@ -418,14 +419,13 @@ class SensorCar(Sonic):
     """
 
     IF_FREQ = 0.05
-    IR_MARK = 0.7
+    IR_MARK = 0.85
 
     def __init__(self, filter_deepth: int = 2):
         """Initialisierung der Klasse SensorCar.
 
         Args:
             ir_sensor_analog(list): Analoge Messwerte des IR-Sensors.
-            ir_sensors(list): Analoge Messwerte des IR-Sensors.
             line(bool): Flag zur Erkennung der Line.
             steering_soll(list): tbd.
             steering_angle_temp(float): Temporaer gespeicherter Lenkwinkel.
@@ -435,7 +435,6 @@ class SensorCar(Sonic):
         super().__init__()
         self.ir = basisklassen.Infrared()
         self._ir_sensor_analog = self.ir.read_analog()
-        self._ir_sensors = [20, 20, 10, 20, 20]
         self._line = True
         self._steering_soll = [0] * filter_deepth
         self._steering_angle_temp = 0
@@ -452,31 +451,7 @@ class SensorCar(Sonic):
         """Funktion zur Initalisierung des Fahr-Modus mit Multi-Threading"""
 
         super().startDriveMode()
-        self._worker.submit(self.ifWorker)
         self._line = True
-
-    def ifWorker(self):
-        """Funktion zur Abtastung des IF-Sensors mit Multi-Threading.
-
-        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.
-        """
-        while self._active:
-            self.ir_sensor_analog
-            time.sleep(self.IF_FREQ)
-
-    def usWorker(self):
-        """Funktion zur Abtastung des US-Sensors mit Multi-Threading.
-
-        Hinweis: Wird automatisch in der Funktion startDriveMode() im SensorCar genutzt.
-        """
-        while self._active:
-            if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
-                self._hindernis = True
-                self._cntHindernis = time.perf_counter()
-            if self._hindernis == True and (self.distance - self.US_OFFSET) > 0:
-                self._hindernis = False
-
-            time.sleep(self.US_FREQ)
 
     @property
     def ir_sensor_analog(self):
@@ -485,11 +460,11 @@ class SensorCar(Sonic):
         Returns:
             [list]: Analogwerte der 5 IR-Sensoren
         """
-        # self._ir_sensors = self.ir.read_analog()
-        self._ir_sensors = (
+        # self._ir_sensor_analog = self.ir.read_analog()
+        self._ir_sensor_analog = (
             (self.ir.get_average(2) * np.array(self._ir_calib)).round(2).tolist()
         )
-        return self._ir_sensors
+        return self._ir_sensor_analog
 
     @property
     def drive_data(self):
@@ -504,7 +479,7 @@ class SensorCar(Sonic):
             self._steering_angle,
             self._distance,
         ]
-        data += self._ir_sensors
+        data += self._ir_sensor_analog
 
         return data
 
@@ -514,7 +489,8 @@ class SensorCar(Sonic):
         Returns:
         [int]: Soll-Lenkwinkel aus Uebersetzungstabelle.
         """
-        ir_data = np.array(self._ir_sensors)
+        ir_data = np.array(self.ir_sensor_analog)
+        print(ir_data)
         compValue = self.IR_MARK * ir_data.max()
         sensor_digital = np.where(ir_data < compValue, 1, 0)
         lookupValue = (lookup * sensor_digital).sum()
@@ -538,7 +514,6 @@ class SensorCar(Sonic):
                 print("None-Fehler")
             else:
                 ir_out = 100
-                self._line = False
                 self._active = False
 
             time.sleep(self.IF_FREQ)
@@ -550,6 +525,7 @@ class SensorCar(Sonic):
 
             while self._active and self._line:
                 ir_result = self.get_ir_result()
+                print(ir_result)
 
                 if ir_result < 100:
                     self._steering_soll = self._steering_soll[1:]
@@ -574,9 +550,8 @@ class SensorCar(Sonic):
                     self._line = True
                     self.drive(self._tmpspeed, 1)
                     break
-                if not self._line and (
-                    self._steering_angle_temp < 20
-                ):  # ((time.perf_counter() - cntTimer) > 0.8):
+                if not self._line and (self._steering_angle_temp < 20):  
+                # ((time.perf_counter() - cntTimer) > 0.8):
                     self._active = False
                     break
 
@@ -613,7 +588,8 @@ class SensorCar(Sonic):
                         self._line = True
                         self.drive(self._tmpspeed, 1)
                         break
-                    if not self._line and ((time.perf_counter() - cntTimer) > 0.8):
+                    if not self._line and (self._steering_angle_temp < 20):
+                    # ((time.perf_counter() - cntTimer) > 0.8):
                         self._active = False
                         break
 
