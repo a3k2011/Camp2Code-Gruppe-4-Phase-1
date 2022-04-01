@@ -114,8 +114,7 @@ kpi_5 = dbc.Card([dbc.CardBody([html.H6("vm"), html.P(id="kpi5")])])
 
 
 row_joystick = dbc.Row(
-    """Elemente für die manuelle Fahrzeugsteuerung
-    """[
+    [
         dbc.Col([html.P("Manuell on/off"), dbc.Switch(id="sw_manual")], width=4),
         dbc.Col(
             daq.Joystick(id="joystick", size=100, className="mb-3"),
@@ -164,7 +163,6 @@ CARD_ManuelleSteuerung = dbc.Card(
         ),
         row_joystick,
     ],
-    className="card text-white bg-dark mb-3",
 )
 
 COL_Logfiles = [
@@ -494,6 +492,7 @@ def selectedLog(logFile, logDetails):
     Input("intervall_10s", "n_intervals"),
 )
 def updateFileList(value):
+    """alle 10 Sekunden den Logger-Ordner auf neue Files prüfen"""
     return getLoggerFiles()
 
 

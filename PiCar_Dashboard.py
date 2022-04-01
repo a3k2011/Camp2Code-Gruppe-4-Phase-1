@@ -15,6 +15,11 @@ car = PiCar.SensorCar(filter_deepth=2)
 
 
 def get_ip_address():
+    """Ermittlung der IP-Adresse im Netzwerk
+
+    Returns:
+        str: lokale IP-Adresse
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     socket_ip = s.getsockname()[0]
@@ -23,6 +28,11 @@ def get_ip_address():
 
 
 def getLoggerFiles():
+    """Files im Ordner "Logger" auflisten
+
+    Returns:
+        list: Log-Dateien
+    """
     fileList = []
     outputList = []
     if os.path.isdir("Logger"):
@@ -36,6 +46,11 @@ def getLoggerFiles():
 
 
 def getLogItemsList():
+    """Definition der Spaltennamen für die Daten im Logfile
+
+    Returns:
+        list: Spaltennamen
+    """
     return [
         "time",
         "v",
@@ -51,12 +66,17 @@ def getLogItemsList():
 
 
 def load_data_to_df(pfad):
+    """aktualisiert die Daten im Dataframe
+
+    Args:
+        pfad (str): Dateipfad zum File das geladen werden soll
+    """
     global df
     df = pd.read_json(os.path.join("Logger", pfad))
     df.columns = getLogItemsList()
 
 
-FP_LISTE = [
+FP_LISTE = [  # Liste der auswählbaren Fahrprogramme
     {"label": "FP 1, vor-zurück", "value": 1},
     {"label": "FP 2, im Kreis", "value": 2},
     {"label": "FP 3, US-Testfahrt", "value": 3},
@@ -183,7 +203,7 @@ COL_Fahrzeugsteuerung = [  # Col Fahrzeugsteuerung
                 children="Fahrzeugsteuerung",
                 style={
                     "textAlign": "center",
-                    "paddingBottom": 10,
+                    "paddingBottom": 20,
                 },
             )
         ]
@@ -317,6 +337,19 @@ app.layout = dbc.Container(
     State("slider_speed", "value"),
 )
 def joystick_values(angle, force, switch, max_Speed):
+    """Steuerung über Joystick
+        berechnet anhand der Joystick-Werte den Lenkeinschlag
+        und zusätzlich mit der eingestellten Maximalgeschwindigkeit die Fahrgeschwindigkeit
+
+    Args:
+        angle (float): Winkelwert des Joysticks
+        force (float): Kraftweg des Joysticks
+        switch (bool): Schalter "manuelle Fahrt"
+        max_Speed (int): Wert Slider "slider_speed"
+
+    Returns:
+        str: gibt die ermittelten Sollwerte zurück
+    """
     debug = ""
     if angle != None and force != None:
         if switch:
@@ -351,6 +384,14 @@ def joystick_values(angle, force, switch, max_Speed):
 
 
 def computeKPI(data):
+    """Berechnung der Kenndaten des Log-Files
+
+    Args:
+        data (pandas.DataFrame): Log-Daten als DataFrame
+
+    Returns:
+        tuple of str: berechnete Werte
+    """
     vmax = data["v"].max()
     vmin = data["v"][1:].min()
     vmean = round(data["v"].mean(), 2)
@@ -368,12 +409,16 @@ def computeKPI(data):
     Input("dd_Logfiles", "value"),
 )
 def update_KPI_DD(logFile):
-    # fahrAttr = [{"label": ddLabels[key], "value": key} for key in df.keys()]
+    """Aktualisieren der Kennwerte nach auswahl eines neuen Files
+
+    Args:
+        logFile (str): nur wegen input nötig
+
+    Returns:
+        str: setzt die "children" der kpi's
+    """
     global df
-    time.sleep(1)
-    # if df != None:
-    #   df = pd.read_json(os.path.join("Logger", logFile))
-    #   df.columns = getLogItemsList()
+    time.sleep(0.2)  # damit das File erst geladen werden kann
     try:
         vmax, vmin, vmean, duration, route = computeKPI(df)
         return vmax, vmin, vmean, duration, route
@@ -387,6 +432,15 @@ def update_KPI_DD(logFile):
     Input("dd_LogDetails", "value"),
 )
 def selectedLog(logFile, logDetails):
+    """Auswahl des Logfiles
+
+    Args:
+        logFile (str): Log-File
+        logDetails (list): Liste mit Elementen die angezeigt werden sollen
+
+    Returns:
+        plotly figure: Graph mit ausgewählten Daten
+    """
     global df
     if logFile != "0":
         load_data_to_df(logFile)
@@ -407,6 +461,7 @@ def selectedLog(logFile, logDetails):
     Input("intervall_10s", "n_intervals"),
 )
 def updateFileList(value):
+    """alle 10 Sekunden den Logger-Ordner auf neue Files prüfen"""
     return getLoggerFiles()
 
 
@@ -418,6 +473,11 @@ def updateFileList(value):
     State("slider_speed", "value"),
 )
 def button_action(btn_start, btn_stop, fp, speed):
+    """Buttons "Start" und "Stop" verarbeiten
+
+    Returns:
+        int: Schalter für manuellen Betrieb auf 0 setzen
+    """
     changed_id = [p["prop_id"] for p in callback_context.triggered][0]
     if "btn_start" in changed_id:
         if fp == 1:
