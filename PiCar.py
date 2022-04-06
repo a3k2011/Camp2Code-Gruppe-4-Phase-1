@@ -4,6 +4,7 @@ import click
 import os, json, time
 from datetime import datetime
 import numpy as np
+from collections import deque
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
@@ -23,8 +24,8 @@ angle_from_sensor = {
     24: 32,
     16: 40,
     31: 100,
+    101: 101,
 }
-lookup = np.array([1, 2, 4, 8, 16])
 
 
 class BaseCar:
@@ -416,28 +417,31 @@ class SensorCar(Sonic):
         SonicCar (_type_): Erbt von der Klasse SonicCar
         IF_FREQ (float): Abtastrate des IF-Sensors in Sekunden.
         IR_MARK (float): Schwellwert zur Erkennung der schwarzen Linie.
+        filter_deepth (int): Anzahl der gespeicherten Lenkwinkel in temporärer Liste.
     """
 
     IF_FREQ = 0.05
-    IR_MARK = 0.85
+    IR_FAKTOR = 0.85
 
     def __init__(self, filter_deepth: int = 2):
         """Initialisierung der Klasse SensorCar.
 
         Args:
-            ir_sensor_analog(list): Analoge Messwerte des IR-Sensors.
             line(bool): Flag zur Erkennung der Line.
-            steering_soll(list): tbd.
-            steering_angle_temp(float): Temporaer gespeicherter Lenkwinkel.
+            ir_sensor_analog(list): Analoge Messwerte des IR-Sensors.
+            ir_matrix (tupel): tbd.
+            tmp_sa (list):  Liste der letzten n Lenkwinkel. (filter_deepth)
+            tmp_speed (int): Gemerkte Geschwindigkeit des PiCars.
             ir_calib(config.json): Importiert die kalibrierten Werte fuer den IR-Sensor aus der config.json.
         """
 
         super().__init__()
         self.ir = basisklassen.Infrared()
-        self._ir_sensor_analog = self.ir.read_analog()
         self._line = True
-        self._steering_soll = [0] * filter_deepth
-        self._steering_angle_temp = 0
+        self._ir_sensor_analog = self.ir.get_average(2)
+        self._ir_matrix = (1, 2, 4, 8, 16)
+        self._tmp_sa = deque([0] * filter_deepth)
+        self._tmp_speed = 0
         self._ir_calib = None
         with open("config.json", "r") as f:
             data = json.load(f)
@@ -460,10 +464,7 @@ class SensorCar(Sonic):
         Returns:
             [list]: Analogwerte der 5 IR-Sensoren
         """
-        # self._ir_sensor_analog = self.ir.read_analog()
-        self._ir_sensor_analog = (
-            (self.ir.get_average(2) * np.array(self._ir_calib)).round(2).tolist()
-        )
+        self._ir_sensor_analog = ((self.ir.get_average(2) * np.array(self._ir_calib)).round(2).tolist())
         return self._ir_sensor_analog
 
     @property
@@ -484,112 +485,110 @@ class SensorCar(Sonic):
         return data
 
     def get_ir_result(self):
-        """Ausgabe des Lenkwinkels anhand Uebersetzungstabelle
+        """Ausgabe des IR-Results (Key-Value) fuer Uebersetzungstabelle
 
         Returns:
-        [int]: Soll-Lenkwinkel aus Uebersetzungstabelle.
+        [int]: IR-Key für Uebersetzungstabelle.
         """
         ir_data = np.array(self.ir_sensor_analog)
-        print(ir_data)
-        compValue = self.IR_MARK * ir_data.max()
-        sensor_digital = np.where(ir_data < compValue, 1, 0)
-        lookupValue = (lookup * sensor_digital).sum()
-        ir_result = angle_from_sensor.get(lookupValue)
-        if ir_result == None:
-            return 101
+        thresVal = self.IR_FAKTOR * ir_data.max()
+
+        ir_digital = np.where(ir_data < thresVal, 1, 0)
+        ir_result = (self._ir_matrix * ir_digital).sum()
+
         return ir_result
 
-    def lenkFunction5(self):
+    def get_steering_angle(self):
+        """Ausgabe des Lenkwinkels fuer das PiCar (Mean)
+        
+        Returns:
+        [int]: Mittleren Lenkwinkel.
+        """
+        ir_result = self.get_ir_result()
+
+        sa_lookup = angle_from_sensor.get(ir_result) if angle_from_sensor.get(ir_result) is not None else 101
+        sa_soll = sa_lookup if sa_lookup < 100 else self._tmp_sa[1]
+
+        self._tmp_sa.popleft()
+        self._tmp_sa.append(sa_soll)
+
+        return np.mean(self._tmp_sa), sa_lookup
+
+    def lenkFunction_5(self):
         """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 5 aus."""
 
-        while self._active:
-            ir_result = self.get_ir_result()
+        print("Start LenkFunktion 5")
 
-            if ir_result < 100:
-                self._steering_soll = self._steering_soll[1:]
-                self._steering_soll.append(ir_result)
-                ir_out = np.mean(self._steering_soll)
-                self.steering_angle = ir_out
-            elif ir_result == 101:
+        while self._active:
+
+            sa_mean, sa_lookup = self.get_steering_angle()
+
+            if sa_lookup < 100:
+                self.steering_angle = sa_mean
+            elif sa_lookup == 101:
                 print("None-Fehler")
             else:
-                ir_out = 100
                 self._active = False
 
             time.sleep(self.IF_FREQ)
 
-    def lenkFunction6(self):
+    def lenkFunction_6(self):
         """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 6 aus."""
 
         while self._active:
 
             while self._active and self._line:
-                ir_result = self.get_ir_result()
-                print(ir_result)
+                sa_mean, sa_lookup = self.get_steering_angle()
 
-                if ir_result < 100:
-                    self._steering_soll = self._steering_soll[1:]
-                    self._steering_soll.append(ir_result)
-                    ir_out = np.mean(self._steering_soll)
-                    self.steering_angle = ir_out
-                    self._steering_angle_temp = ir_out
-                elif ir_result == 101:
+                if sa_lookup < 100:
+                    self.steering_angle = sa_mean
+                elif sa_lookup == 101:
                     print("None-Fehler")
                 else:
-                    ir_out = 100
                     self._line = False
-                    self.drive(self._tmpspeed, -1)
-                    self.steering_angle = self._steering_angle_temp * -1
-                    cntTimer = time.perf_counter()
+                    self.drive(self._tmp_speed, -1)
+                    self.steering_angle = self._tmp_sa[1] * -1
 
                 time.sleep(self.IF_FREQ)
 
             while self._active and not self._line:
-                ir_result = self.get_ir_result()
-                if ir_result < 100:
+                sa_mean, sa_lookup = self.get_steering_angle()
+                if sa_lookup < 100:
                     self._line = True
-                    self.drive(self._tmpspeed, 1)
+                    self.drive(self._tmp_speed, 1)
                     break
-                if not self._line and (self._steering_angle_temp < 20):  
-                # ((time.perf_counter() - cntTimer) > 0.8):
+                if not self._line and abs(self._tmp_sa[1]) < 20:  
                     self._active = False
                     break
 
                 time.sleep(self.IF_FREQ)
 
-    def lenkFunction7(self):
+    def lenkFunction_7(self):
         """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 7 aus."""
 
         while self._active:
             while self._active and not self._hindernis:
                 while self._active and self._line and not self._hindernis:
-                    ir_result = self.get_ir_result()
+                    sa_mean, sa_lookup = self.get_steering_angle()
 
-                    if ir_result < 100:
-                        self._steering_soll = self._steering_soll[1:]
-                        self._steering_soll.append(ir_result)
-                        ir_out = np.mean(self._steering_soll)
-                        self.steering_angle = ir_out
-                        self._steering_angle_temp = ir_out
-                    elif ir_result == 101:
+                    if sa_lookup < 100:
+                        self.steering_angle = sa_mean
+                    elif sa_lookup == 101:
                         print("None-Fehler")
                     else:
-                        ir_out = 100
                         self._line = False
-                        self.drive(self._tmpspeed, -1)
-                        self.steering_angle = self._steering_angle_temp * -1
-                        cntTimer = time.perf_counter()
+                        self.drive(self._tmp_speed, -1)
+                        self.steering_angle = self._tmp_sa[1] * -1
 
                     time.sleep(self.IF_FREQ)
 
                 while self._active and not self._line and not self._hindernis:
-                    ir_result = self.get_ir_result()
-                    if ir_result < 100:
+                    sa_mean, sa_lookup = self.get_steering_angle()
+                    if sa_lookup < 100:
                         self._line = True
-                        self.drive(self._tmpspeed, 1)
+                        self.drive(self._tmp_speed, 1)
                         break
-                    if not self._line and (self._steering_angle_temp < 20):
-                    # ((time.perf_counter() - cntTimer) > 0.8):
+                    if not self._line and abs(self._tmp_sa[1]) < 20:
                         self._active = False
                         break
 
@@ -601,65 +600,48 @@ class SensorCar(Sonic):
                     self._active = False
                 time.sleep(self.US_FREQ)
             else:
-                self.drive(self._tmpspeed, 1)
+                self.drive(self._tmp_speed, 1)
+
+    def generischerFP(self, fp, v=50):
+        """Funktion für den generischen Fahrparcour"""
+
+        print(f"Fahrparcour {fp} gestartet.")
+        # Starte Drive Mode
+        self.startDriveMode()
+        self._tmp_speed = v
+
+        if fp == 5:
+            self._worker.submit(self.lenkFunction_5)
+        elif fp == 6:
+            self._worker.submit(self.lenkFunction_6)
+        elif fp == 7:
+            self._worker.submit(self.lenkFunction_7)
+        else:
+            print("Kein gültiger Fahrparcour ausgewählt!")
+
+        # Starte die Fahrt
+        self.drive(v, 1)
+
+        # Wartet auf Fertigstellung aller Threads
+        self.endDriveMode(waitingWorker=True)
+
+        # Ende Drive Mode
+        print(f"Fahrparcour {fp} beendet.")
+
 
     def fp5(self, v=50):
         """Funktion für den Fahrparcour 5"""
-
-        print("Fahrparcour 5 gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
-
-        self._worker.submit(self.lenkFunction5)
-
-        # Starte die Fahrt
-        self.drive(v, 1)
-
-        # Wartet auf Fertigstellung aller Threads
-        self.endDriveMode(waitingWorker=True)
-
-        # Ende Drive Mode
-        print("Fahrparcour 5 beendet.")
+        self.generischerFP(5, v)
 
     def fp6(self, v=50):
         """Funktion für den Fahrparcour 6"""
-
-        print("Fahrparcour 6 gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
-
-        self._worker.submit(self.lenkFunction6)
-        self._tmpspeed = v
-
-        # Starte die Fahrt
-        self.drive(v, 1)
-
-        # Wartet auf Fertigstellung aller Threads
-        self.endDriveMode(waitingWorker=True)
-
-        # Ende Drive Mode
-        print("Fahrparcour 6 beendet.")
+        self.generischerFP(6, v)
 
     def fp7(self, v=50):
         """Funktion für den Fahrparcour 7"""
+        self.generischerFP(7, v)
 
-        print("Fahrparcour 7 gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
-
-        self._worker.submit(self.lenkFunction7)
-        self._tmpspeed = v
-
-        # Starte die Fahrt
-        self.drive(v, 1)
-
-        # Wartet auf Fertigstellung aller Threads
-        self.endDriveMode(waitingWorker=True)
-
-        # Ende Drive Mode
-        print("Fahrparcour 7 beendet.")
-
-    def test_ir(self):
+    def print_ir_values(self):
         """Funktion gibt 10 Messwerte des IR-Sensors aus."""
 
         for i in range(10):
@@ -873,7 +855,7 @@ def main(modus):
             print("Abbruch")
 
     if modus == 9:
-        SensorCar().test_ir()
+        SensorCar().print_ir_values()
 
 
 if __name__ == "__main__":
