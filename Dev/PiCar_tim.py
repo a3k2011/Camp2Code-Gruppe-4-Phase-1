@@ -499,12 +499,6 @@ class SensorCar(Sonic):
         ir_digital_sum = np.sum(ir_digital)
         ir_result = np.sum((self._ir_matrix * ir_digital)) / ir_digital_sum
 
-        # print("Normiert auf 100: ", ir_data_norm)
-        # print("Threshold-Value: ", thresVal)
-
-        # print("Digital-Output", ir_digital)
-        # print("IR-Ergebnis: ", ir_result)
-
         return ir_result, ir_digital, ir_digital_sum, ir_minArg
 
     def set_steering_angle(self, ir_result):
@@ -537,25 +531,15 @@ class SensorCar(Sonic):
         else:
             return True
 
-
     def lenkFunction_5(self):
         """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 5 aus."""
 
         while self._active:
             ir_result, ir_digital, ir_digital_sum, ir_minArg = self.get_ir_result()
 
-            if ir_digital_sum > 2:
+            if not self.check_line_condition(ir_result, ir_digital_sum, ir_digital):
                 self._line = False
                 self._active = False
-                print("Mehr als zwei Sensoren triggered!")
-            elif ir_digital_sum == 2 and (ir_result == 0 or abs(ir_result) == 1 or (abs(ir_result) == 0.5 and ir_digital[2] == 0)):
-                self._line = False
-                self._active = False
-                print("Zwei Sensoren mit mind. einer 0 dazwischen!")
-            elif np.ptp([self._tmp_ir_result, ir_result]) > 1:
-                self._line = False
-                self._active = False
-                print("Sprung zwischen zwei IR-Resuluts zu gross!")
             else:
                 self.set_steering_angle(ir_result)
 
@@ -571,78 +555,30 @@ class SensorCar(Sonic):
 
                 if not self.check_line_condition(ir_result, ir_digital_sum, ir_digital):
                     self._line = False
-                    print("Linie verloren!" + "-"*25)
-                    print(f"Digital Output: {ir_digital} Letzter SA: {self._tmp_SA}")
-                    if abs(self._tmp_SA) < 5:
+                    if abs(self._tmp_SA) < 20:
                         self._active = False
                     else:
                         self.steering_angle = self._tmp_SA * -1
                         self.drive(self._tmp_speed, -1)
                         
                 else:
-                    print("Gelenkt!" + "*"*50)
                     self.set_steering_angle(ir_result)
 
                 time.sleep(self.IF_FREQ)
                     
             while self._active and not self._line:
                 ir_result, ir_digital, ir_digital_sum, ir_minArg = self.get_ir_result()
-                print("Suche Linie!")
 
-                if self.check_line_condition(ir_result, ir_digital_sum, ir_digital) and abs(ir_result) <= 1.5:
+                if self.check_line_condition(ir_result, ir_digital_sum, ir_digital):
                     self._line = True
                     self.steering_angle = self._tmp_SA
                     self.drive(self._tmp_speed, 1)
-                    print("Linie gefunden!" + "+"*25)
-                    print(f"Digital Output: {ir_digital} Letzter SA: {self._tmp_SA}")
 
                 time.sleep(self.IF_FREQ)
 
     def lenkFunction_7(self):
         """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 7 aus."""
-
-        while self._active:
-            while self._active and not self._hindernis:
-                while self._active and self._line and not self._hindernis:
-                    ir_result = self.get_ir_result()
-
-                    if ir_result < 100:
-                        self._steering_soll = self._steering_soll[1:]
-                        self._steering_soll.append(ir_result)
-                        ir_out = np.mean(self._steering_soll)
-                        self.steering_angle = ir_out
-                        self._steering_angle_temp = ir_out
-                    elif ir_result == 101:
-                        print("None-Fehler")
-                    else:
-                        ir_out = 100
-                        self._line = False
-                        self.drive(self._tmpspeed, -1)
-                        self.steering_angle = self._steering_angle_temp * -1
-                        cntTimer = time.perf_counter()
-
-                    time.sleep(self.IF_FREQ)
-
-                while self._active and not self._line and not self._hindernis:
-                    ir_result = self.get_ir_result()
-                    if ir_result < 100:
-                        self._line = True
-                        self.drive(self._tmpspeed, 1)
-                        break
-                    if not self._line and (self._steering_angle_temp < 20):
-                    # ((time.perf_counter() - cntTimer) > 0.8):
-                        self._active = False
-                        break
-
-                    time.sleep(self.IF_FREQ)
-
-            while self._active and self._hindernis:
-                self.stop()
-                if (time.perf_counter() - self._cntHindernis) > 5:
-                    self._active = False
-                time.sleep(self.US_FREQ)
-            else:
-                self.drive(self._tmpspeed, 1)
+        self._active = False
 
     def generischerFahrparcour(self, fp=5, v=50):
         """Funtion für einen generischen Fahrparcour"""
