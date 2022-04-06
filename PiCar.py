@@ -8,7 +8,13 @@ from collections import deque
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
-"""Definition der verfuegbaren Fahrparcours"""
+"""Definition der verfuegbaren Fahrparcours.
+
+Args:
+        Key (int): Nummer des jeweiligen Fahrparcours.
+        Value (tupel): Nummer des jeweiligen Fahrparcours / Boolean fuer Multi-Threading Worker
+"""
+
 dictFahrparcour = {1: (1, False),
                     2: (2, False),
                     3: (3, False),
