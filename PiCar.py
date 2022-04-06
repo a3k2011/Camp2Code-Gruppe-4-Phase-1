@@ -389,7 +389,7 @@ class Sonic(BaseCar):
 
         # Starte die Fahrt
         self.drive(v, 1)
-        
+
         while self._active and not self._hindernis:
             time.sleep(0.1)
 
@@ -398,7 +398,6 @@ class Sonic(BaseCar):
 
         self._worker.submit(self.rangierenWorker)
         # self._worker.submit(self.inputWorker)
-        self._tmp_speed = v
 
         # Starte die Fahrt
         self.drive(v, 1)
