@@ -8,6 +8,16 @@ from collections import deque
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
+"""Definition der verfuegbaren Fahrparcours"""
+dictFahrparcour = {1: (1, False),
+                    2: (2, False),
+                    3: (3, False),
+                    4: (4, True),
+                    5: (5, True),
+                    6: (6, True),
+                    7: (7, True),
+                }
+
 
 class BaseCar:
     """Die Klasse BaseCar implementiert die Grund-Funktionalitaeten des PiCars.
@@ -192,12 +202,40 @@ class BaseCar:
 
         self.bw.stop()
 
+    def generischerFahrparcour(self, fp, v=50):
+        """Funktion fuer den generischen Fahrparcour des PiCars."""
+
+        if fp in dictFahrparcour:
+            print(f"Fahrparcour {fp} gestartet.")
+
+            # Starte Drive Mode
+            self.startDriveMode()
+            self._tmp_speed = v
+
+            if fp == 1:
+                self.fp1(v)
+            elif fp == 2:
+                self.fp2(v)
+            elif fp == 3:
+                self.fp3(v)
+            elif fp == 4:
+                self.fp4(v)
+            elif fp == 5:
+                self.fp5(v)
+            elif fp == 6:
+                self.fp6(v)
+            elif fp == 7:
+                self.fp7(v)
+
+            # Ende Drive Mode
+            self.endDriveMode(waitingWorker=dictFahrparcour.get(fp)[1])
+
+            print(f"Fahrparcour {fp} beendet.")
+        else:
+            print("Es wurde kein gueltiger Fahrparcour ausgewaehlt!")
+
     def fp1(self, v=50):
         """Funktion für den Fahrparcour 1"""
-
-        print("Fahrparcour 1 gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
 
         # Vorwaerts 3sec
         self.drive(v, 1)
@@ -211,16 +249,8 @@ class BaseCar:
         self.drive(v, -1)
         time.sleep(3)
 
-        # Ende Drive Mode
-        self.endDriveMode(waitingWorker=False)
-        print("Fahrparcour 1 beendet.")
-
     def fp2(self, v=50):
         """Funktion für den Fahrparcour 2"""
-
-        print("Fahrparcour 2 gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
 
         for sa in [(-self.SA_MAX + 5), (self.SA_MAX - 5)]:
             # Vorwaerts 1sec gerade
@@ -243,9 +273,6 @@ class BaseCar:
             self.steering_angle = 0
             time.sleep(1)
 
-        # Ende Drive Mode
-        self.endDriveMode(waitingWorker=False)
-        print("Fahrparcour 2 beendet.")
 
 
 class Sonic(BaseCar):
@@ -360,25 +387,15 @@ class Sonic(BaseCar):
     def fp3(self, v=50):
         """Funktion für den Fahrparcour 3"""
 
-        print("Fahrparcour 3 gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
-
         # Starte die Fahrt
         self.drive(v, 1)
+        
         while self._active and not self._hindernis:
             time.sleep(0.1)
-
-        # Ende Drive Mode
-        self.endDriveMode(waitingWorker=False)
-        print("Fahrparcour 3 beendet.")
 
     def fp4(self, v=50):
         """Funktion für den Fahrparcour 4"""
 
-        print("Fahrparcour 4 gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
         self._worker.submit(self.rangierenWorker)
         # self._worker.submit(self.inputWorker)
         self._tmp_speed = v
@@ -386,11 +403,6 @@ class Sonic(BaseCar):
         # Starte die Fahrt
         self.drive(v, 1)
 
-        # Wartet auf Fertigstellung aller Threads
-        self.endDriveMode(waitingWorker=True)
-
-        # Ende Drive Mode
-        print("Fahrparcour 4 beendet.")
 
 
 class SensorCar(Sonic):
@@ -515,8 +527,11 @@ class SensorCar(Sonic):
 
         return np.mean(self._tmp_sa), sa_lookup
 
-    def lenkFunction_5(self):
-        """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 5 aus."""
+    def fp5(self, v=50):
+        """Funktion für den Fahrparcour 5"""
+        
+        # Starte die Fahrt
+        self.drive(v, 1)
 
         while self._active:
 
@@ -532,8 +547,11 @@ class SensorCar(Sonic):
 
             time.sleep(self.IF_FREQ)
 
-    def lenkFunction_6(self):
-        """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 6 aus."""
+    def fp6(self, v=50):
+        """Funktion für den Fahrparcour 6"""
+        
+        # Starte die Fahrt
+        self.drive(v, 1)
 
         while self._active:
 
@@ -565,9 +583,12 @@ class SensorCar(Sonic):
 
                 time.sleep(self.IF_FREQ)
 
-    def lenkFunction_7(self):
-        """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 7 aus."""
+    def fp7(self, v=50):
+        """Funktion für den Fahrparcour 7"""
 
+        # Starte die Fahrt
+        self.drive(v, 1)
+        
         while self._active:
             while self._active and not self._hindernis:
                 while self._active and self._line and not self._hindernis:
@@ -604,45 +625,6 @@ class SensorCar(Sonic):
                 time.sleep(self.US_FREQ)
             else:
                 self.drive(self._tmp_speed, 1)
-
-    def generischerFP(self, fp, v=50):
-        """Funktion für den generischen Fahrparcour"""
-
-        print(f"Fahrparcour {fp} gestartet.")
-        # Starte Drive Mode
-        self.startDriveMode()
-        self._tmp_speed = v
-
-        if fp == 5:
-            self._worker.submit(self.lenkFunction_5)
-        elif fp == 6:
-            self._worker.submit(self.lenkFunction_6)
-        elif fp == 7:
-            self._worker.submit(self.lenkFunction_7)
-        else:
-            print("Kein gültiger Fahrparcour ausgewählt!")
-
-        # Starte die Fahrt
-        self.drive(v, 1)
-
-        # Wartet auf Fertigstellung aller Threads
-        self.endDriveMode(waitingWorker=True)
-
-        # Ende Drive Mode
-        print(f"Fahrparcour {fp} beendet.")
-
-
-    def fp5(self, v=50):
-        """Funktion für den Fahrparcour 5"""
-        self.generischerFP(5, v)
-
-    def fp6(self, v=50):
-        """Funktion für den Fahrparcour 6"""
-        self.generischerFP(6, v)
-
-    def fp7(self, v=50):
-        """Funktion für den Fahrparcour 7"""
-        self.generischerFP(7, v)
 
     def print_ir_values(self):
         """Funktion gibt 10 Messwerte des IR-Sensors aus."""
@@ -813,31 +795,31 @@ def main(modus):
 
     if modus == 1:
         x = input(str_warnung)
-        SensorCar().fp1() if x == "" else print(str_abbruch)
+        SensorCar().generischerFahrparcour(1) if x == "" else print(str_abbruch)
 
     if modus == 2:
         x = input(str_warnung)
-        SensorCar().fp2() if x == "" else print(str_abbruch)
+        SensorCar().generischerFahrparcour(2) if x == "" else print(str_abbruch)
 
     if modus == 3:
         x = input(str_warnung)
-        SensorCar().fp3() if x == "" else print(str_abbruch)
+        SensorCar().generischerFahrparcour(3) if x == "" else print(str_abbruch)
 
     if modus == 4:
         x = input(str_warnung)
-        SensorCar().fp4() if x == "" else print(str_abbruch)
+        SensorCar().generischerFahrparcour(4) if x == "" else print(str_abbruch)
 
     if modus == 5:
         x = input(str_warnung)
-        SensorCar().fp5() if x == "" else print(str_abbruch)
+        SensorCar().generischerFahrparcour(5) if x == "" else print(str_abbruch)
 
     if modus == 6:
         x = input(str_warnung)
-        SensorCar().fp6() if x == "" else print(str_abbruch)
+        SensorCar().generischerFahrparcour(6) if x == "" else print(str_abbruch)
 
     if modus == 7:
         x = input(str_warnung)
-        SensorCar().fp7() if x == "" else print(str_abbruch)
+        SensorCar().generischerFahrparcour(7) if x == "" else print(str_abbruch)
 
     if modus == 9:
         SensorCar().print_ir_values()
