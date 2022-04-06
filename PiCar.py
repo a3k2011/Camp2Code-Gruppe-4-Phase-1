@@ -8,32 +8,13 @@ from collections import deque
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
-"""Lenkwinkel Lookup-Tabelle fuer IR-Sensoren"""
-angle_from_sensor = {
-    0: 100,
-    1: -40,
-    3: -32,
-    2: -23,
-    7: -23,
-    6: -10,
-    4: 0,
-    14: 0,
-    12: 10,
-    8: 23,
-    28: 23,
-    24: 32,
-    16: 40,
-    31: 100,
-    101: 101,
-}
-
 
 class BaseCar:
-    """Die Klasse BaseCar implementiert die Grund-Funktionen des PiCars.
+    """Die Klasse BaseCar implementiert die Grund-Funktionalitaeten des PiCars.
 
     Args:
         LOG_FREQ (float): Zeit-Interval zum Speichern von Fahrdaten im Datenlogger.
-        SA_MAX (int): Maximaler Lenkwinkel des PiCars
+        SA_MAX (int): Maximaler zulaessiger Lenkwinkel des PiCars.
     """
 
     LOG_FREQ = 0.1
@@ -43,17 +24,19 @@ class BaseCar:
         """Initialisierung der Klasse BaseCar.
 
         Args:
-            steering_angle(float): Lenkwinkel des PiCars.
-            speed(float): Geschwindigkeit des PiCars.
-            direction(float): Fahrtrichtung des PiCars.
-            active(bool): Flag zur Erkennung des Fahr-Zustandes.
-            worker(ThreadPoolExecutor): Instanz der Klasse ThreadPoolExecutor.
-            dl(Datenlogger): Instanz der Klasse Datenlogger.
-            tmpspeed(int): Speichert die Geschwindigkeit bei Uebergabe in Fahrparcour.
+            steering_angle (float): Lenkwinkel des PiCars.
+            speed (int): Geschwindigkeit des PiCars.
+            direction (int): Fahrtrichtung des PiCars.
+            tmp_speed(int): Speichert die Geschwindigkeit bei Uebergabe in Fahrparcour.
+            log_file_path (string): Speichert den Ordner-Pfad fuer die Log-Dateien des Datenloggers.
+            active (bool): Flag zur Erkennung des Fahr-Zustandes.
+            worker (ThreadPoolExecutor): Instanz der Klasse ThreadPoolExecutor.
+            dl (Datenlogger): Instanz der Klasse Datenlogger.
         """
         self._steering_angle = 0
         self._speed = 0
         self._direction = 1
+        self._tmp_speed = 0
         data = {}
         try:
             with open("config.json", "r") as f:
@@ -176,8 +159,8 @@ class BaseCar:
         Hinweis:
         Hier wird auf ein anderes Winkelsystem normiert.
         0 Grad = geradeaus,
-        -45 Grad ist max links,
-        +45 Grad ist max rechts
+        -45 Grad ist maximaler Lenkwinkel links,
+        +45 Grad ist maximal Lenkwinkel rechts
         """
         if value > self.SA_MAX:
             self._steering_angle = self.SA_MAX
@@ -188,7 +171,7 @@ class BaseCar:
         self.fw.turn(90 + self._steering_angle)
 
     def drive(self, geschwindigkeit, richtung):
-        """Funktion zum Fahren PiCars
+        """Funktion zum Fahren PiCars.
 
         Args:
             [int]: geschwindigkeit
@@ -205,7 +188,7 @@ class BaseCar:
             self.stop()
 
     def stop(self):
-        """Funktion zum stoppen der Hinterraeder des PiCars"""
+        """Funktion zum Stoppen der Hinterraeder des PiCars."""
 
         self.bw.stop()
 
@@ -281,15 +264,15 @@ class Sonic(BaseCar):
         """Initialisierung der Klasse Sonic.
 
         Args:
-            distance(int): Abstand zum aktuellen Hindernis.
-            hindernis(bool): Flag zur Erkennung eines Hindernisses.
-            tmpspeed(int): Speichert die Geschwindigkeit bei Uebergabe in Fahrparcour.
+            distance (int): Abstand zum aktuellen Hindernis.
+            hindernis (bool): Flag zur Erkennung eines Hindernisses.
+            timerHindernis (time): Messung der Zeit waehrend ein Hindernis erkannt wird.
         """
         super().__init__()
         self.us = basisklassen.Ultrasonic()
         self._distance = self.US_OFFSET + 1
         self._hindernis = False
-        self._tmpspeed = None
+        self._timerHindernis = 0
 
     def startDriveMode(self):
         """Funktion zur Initalisierung des Fahr-Modus mit Multi-Threading"""
@@ -306,20 +289,20 @@ class Sonic(BaseCar):
         while self._active:
             if self._hindernis == False and not (self.distance - self.US_OFFSET) > 0:
                 self._hindernis = True
-                self._cntHindernis = time.perf_counter()
+                self._timerHindernis = time.perf_counter()
             if self._hindernis == True and (self.distance - self.US_OFFSET) > 0:
                 self._hindernis = False
 
             time.sleep(self.US_FREQ)
 
     def inputWorker(self):
-        """Funktion zur Interaktion mit Nutzer mit Multi-Threading.
+        """Funktion zur Interaktion mit dem Nutzer mit Multi-Threading.
 
         Hinweis: Muss zur Verwendung im jeweiligen Fahrparcour hinzugefuegt werden.
                 self._worker.submit(self.inputWorker)
         """
         while self._active:
-            inpUser = input("Fahrbefehl eingeben: ")
+            inpUser = input("Bitte den Befehl eingeben: ")
             dictBefehle = {
                 "f": "self.direction = 1",
                 "b": "self.direction = -1",
@@ -334,7 +317,7 @@ class Sonic(BaseCar):
                 else:
                     raise Exception
             except Exception:
-                print("Kein gültiger Befehl oder gültige Geschwindigkeit!")
+                print("Kein gueltiger Befehl oder gueltige Geschwindigkeit!")
                 continue
 
     def rangierenWorker(self):
@@ -344,14 +327,14 @@ class Sonic(BaseCar):
             if self._hindernis:
 
                 self.drive(50, -1)
-                self.steering_angle = -40
+                self.steering_angle = -self.SA_MAX + 5
 
-                cntTime = time.perf_counter()
-                while (time.perf_counter() - cntTime) < 2.55:
+                timerRangieren = time.perf_counter()
+                while (time.perf_counter() - timerRangieren) < 2.55:
                     time.sleep(0.1)
 
                 self.steering_angle = 0
-                self.drive(self._tmpspeed, 1)
+                self.drive(self._tmp_speed, 1)
 
     @property
     def distance(self):
@@ -398,7 +381,7 @@ class Sonic(BaseCar):
         self.startDriveMode()
         self._worker.submit(self.rangierenWorker)
         # self._worker.submit(self.inputWorker)
-        self._tmpspeed = v
+        self._tmp_speed = v
 
         # Starte die Fahrt
         self.drive(v, 1)
@@ -414,25 +397,44 @@ class SensorCar(Sonic):
     """Die Klasse SensorCar fuegt die Funktion des IR-Sensors zur Sonic-Klasse hinzu.
 
     Args:
-        SonicCar (_type_): Erbt von der Klasse SonicCar
+        SonicCar (_type_): Erbt von der Klasse SonicCar.
         IF_FREQ (float): Abtastrate des IF-Sensors in Sekunden.
-        IR_MARK (float): Schwellwert zur Erkennung der schwarzen Linie.
-        filter_deepth (int): Anzahl der gespeicherten Lenkwinkel in temporärer Liste.
+        IR_FAKTOR (float): Faktor zur Definition des Schwellwert (Threshold) zur Erkennung der schwarzen Linie.
+        filter_depth (int): Anzahl der gespeicherten Lenkwinkel in temporaerer Liste.
+        sa_from_ir_result (dict): Lookup Dictionary fuer den Soll-Lenkwinkel auf Basis der IR-Result.
     """
 
     IF_FREQ = 0.05
     IR_FAKTOR = 0.85
+    IR_NO_LINE = 100
+    IR_INVALID = 101
+    SA_FROM_IR_RESULT = {
+                        0: IR_NO_LINE,
+                        1: -40,
+                        3: -32,
+                        2: -23,
+                        7: -23,
+                        6: -10,
+                        4: 0,
+                        14: 0,
+                        12: 10,
+                        8: 23,
+                        28: 23,
+                        24: 32,
+                        16: 40,
+                        31: IR_NO_LINE,
+                        101: IR_INVALID,
+                    }
 
-    def __init__(self, filter_deepth: int = 2):
+    def __init__(self, filter_depth: int = 2):
         """Initialisierung der Klasse SensorCar.
 
         Args:
-            line(bool): Flag zur Erkennung der Line.
-            ir_sensor_analog(list): Analoge Messwerte des IR-Sensors.
-            ir_matrix (tupel): tbd.
-            tmp_sa (list):  Liste der letzten n Lenkwinkel. (filter_deepth)
-            tmp_speed (int): Gemerkte Geschwindigkeit des PiCars.
-            ir_calib(config.json): Importiert die kalibrierten Werte fuer den IR-Sensor aus der config.json.
+            line (bool): Flag zur Erkennung der Line.
+            ir_sensor_analog (list): Analoge Messwerte des IR-Sensors.
+            ir_matrix (tupel): Multiplikationsmatrix zur Binaerumwandlung.
+            tmp_sa (list):  Liste der letzten n Lenkwinkel. (n=filter_depth)
+            ir_calib (config.json): Importiert die kalibrierten Werte fuer den IR-Sensor aus der config.json.
         """
 
         super().__init__()
@@ -440,8 +442,7 @@ class SensorCar(Sonic):
         self._line = True
         self._ir_sensor_analog = self.ir.get_average(2)
         self._ir_matrix = (1, 2, 4, 8, 16)
-        self._tmp_sa = deque([0] * filter_deepth)
-        self._tmp_speed = 0
+        self._tmp_sa = deque([0] * filter_depth)
         self._ir_calib = None
         with open("config.json", "r") as f:
             data = json.load(f)
@@ -459,7 +460,7 @@ class SensorCar(Sonic):
 
     @property
     def ir_sensor_analog(self):
-        """Ausgabe der Werte der IR-Sensoren unter Beruecksichtigung der Kalibrierten IR-Sensoren.
+        """Ausgabe der Werte der IR-Sensoren unter Beruecksichtigung der kalibrierten IR-Sensoren.
 
         Returns:
             [list]: Analogwerte der 5 IR-Sensoren
@@ -502,12 +503,12 @@ class SensorCar(Sonic):
         """Ausgabe des Lenkwinkels fuer das PiCar (Mean)
         
         Returns:
-        [int]: Mittleren Lenkwinkel.
+        [float]: Mittleren Lenkwinkel.
         """
         ir_result = self.get_ir_result()
 
-        sa_lookup = angle_from_sensor.get(ir_result) if angle_from_sensor.get(ir_result) is not None else 101
-        sa_soll = sa_lookup if sa_lookup < 100 else self._tmp_sa[1]
+        sa_lookup = self.SA_FROM_IR_RESULT.get(ir_result) if self.SA_FROM_IR_RESULT.get(ir_result) is not None else self.IR_INVALID
+        sa_soll = sa_lookup if sa_lookup < self.IR_NO_LINE else self._tmp_sa[1]
 
         self._tmp_sa.popleft()
         self._tmp_sa.append(sa_soll)
@@ -517,18 +518,17 @@ class SensorCar(Sonic):
     def lenkFunction_5(self):
         """Funktion fuehrt die Lenk-Funktionalitaeten fuer Fahrparcour 5 aus."""
 
-        print("Start LenkFunktion 5")
-
         while self._active:
 
             sa_mean, sa_lookup = self.get_steering_angle()
 
-            if sa_lookup < 100:
+            if sa_lookup < self.IR_NO_LINE:
                 self.steering_angle = sa_mean
-            elif sa_lookup == 101:
-                print("None-Fehler")
-            else:
+            elif sa_lookup == self.IR_NO_LINE:
                 self._active = False
+            else:
+                pass
+                # print("Invalid IR-Result")
 
             time.sleep(self.IF_FREQ)
 
@@ -540,20 +540,22 @@ class SensorCar(Sonic):
             while self._active and self._line:
                 sa_mean, sa_lookup = self.get_steering_angle()
 
-                if sa_lookup < 100:
+                if sa_lookup < self.IR_NO_LINE:
                     self.steering_angle = sa_mean
-                elif sa_lookup == 101:
-                    print("None-Fehler")
-                else:
+                elif sa_lookup == self.IR_NO_LINE:
                     self._line = False
                     self.drive(self._tmp_speed, -1)
                     self.steering_angle = self._tmp_sa[1] * -1
+                else:
+                    pass
+                    # print("Invalid IR-Result")
 
                 time.sleep(self.IF_FREQ)
 
             while self._active and not self._line:
                 sa_mean, sa_lookup = self.get_steering_angle()
-                if sa_lookup < 100:
+                
+                if sa_lookup < self.IR_NO_LINE:
                     self._line = True
                     self.drive(self._tmp_speed, 1)
                     break
@@ -571,20 +573,21 @@ class SensorCar(Sonic):
                 while self._active and self._line and not self._hindernis:
                     sa_mean, sa_lookup = self.get_steering_angle()
 
-                    if sa_lookup < 100:
+                    if sa_lookup < self.IR_NO_LINE:
                         self.steering_angle = sa_mean
-                    elif sa_lookup == 101:
-                        print("None-Fehler")
-                    else:
+                    elif sa_lookup == self.IR_NO_LINE:
                         self._line = False
                         self.drive(self._tmp_speed, -1)
                         self.steering_angle = self._tmp_sa[1] * -1
-
+                    else:
+                        pass
+                        # print("Invalid IR-Result")
+                        
                     time.sleep(self.IF_FREQ)
 
                 while self._active and not self._line and not self._hindernis:
                     sa_mean, sa_lookup = self.get_steering_angle()
-                    if sa_lookup < 100:
+                    if sa_lookup < self.IR_NO_LINE:
                         self._line = True
                         self.drive(self._tmp_speed, 1)
                         break
@@ -596,7 +599,7 @@ class SensorCar(Sonic):
 
             while self._active and self._hindernis:
                 self.stop()
-                if (time.perf_counter() - self._cntHindernis) > 5:
+                if (time.perf_counter() - self._timerHindernis) > 5:
                     self._active = False
                 time.sleep(self.US_FREQ)
             else:
@@ -649,56 +652,56 @@ class SensorCar(Sonic):
             time.sleep(self.IF_FREQ)
 
     def calibrate_ir_sensors(self):
-        """Funktion kalibriert die IR-Sensoren unter hellem Untergrund (Weisses Blatt).
+        """Funktion kalibriert die IR-Sensoren auf hellem Untergrund (Weisses Blatt).
 
         Returns:
-        [config.json]: Fuegt den Key: "ir_calib" hinzu.
+        [config.json]: Fuegt den Key: "ir_calib" der JSON-Datei hinzu.
         """
         while True:
-            input("Sensoren auf hellem Untergrund platzieren, dann Taste drücken")
+            input("Bitte das PiCar auf hellem Untergrund platzieren, dann Taste druecken!")
             a = self.ir.get_average(100)
-            print("Messergebnis:", a)
+            print("Messergebnis: ", a)
             user_in = input("Ergebnis verwenden? (j/n/q)")
             if user_in == "n":
-                print("Neue Messung")
+                print("Neue Messung!")
             elif user_in == "j":
                 messung = np.array(a)
                 ir_calib = messung.mean() / messung
                 self._ir_calib = ir_calib.round(4)
-                print("Kalibrierwerte:", self._ir_calib)
+                print("Kalibrierwerte: ", self._ir_calib)
                 data = {}
                 try:
                     with open("config.json", "r") as f:
                         data = json.load(f)
                 except:
-                    print("File error read")
+                    print("Datei konnte nicht gelesen werden.")
                 data["ir_calib"] = self._ir_calib.tolist()
                 try:
                     with open("config.json", "w") as f:
                         json.dump(data, f)
                 except:
-                    print("File error write")
+                    print("Datei konnte nicht geschrieben werden.")
                 break
             else:
-                print("Abbruch durch Beutzer")
+                print("Abbruch durch Benutzer.")
                 break
 
-        print("IR Kalibrierung beendet")
+        print("IR-Kalibrierung wurde beendet.")
 
 
 class Datenlogger:
     """Datenlogger Klasse
 
     Funktion:
-    Speichert übergebene Tupels oder Listen mit Angabe des Zeitdeltas seid Start der Aufzeichnung in ein json-File
+    Speichert uebergebene Tupels oder Listen mit Angabe des Zeitdeltas ab Start der Aufzeichnung in ein JSON-File.
 
     Returns:
-        [*json]: Messwerte aus uebergebenen Daten mit bliebigem Interval.
+        [*.json]: Messwerte aus uebergebenen Daten mit bliebigem Zeitinterval.
     """
 
     def __init__(self, log_file_path=None):
-        """Zielverzeichnis fuer Logfiles kann beim Init mit uebergeben werden
-            Wenn der Ordner nicht existiert wird er erzeugt
+        """Zielverzeichnis fuer Logfiles kann beim Init mit uebergeben werden.
+            Wenn der Ordner nicht existiert wird er erzeugt.
 
         Args:
             log_file_path (_type_, optional): Angabe des Zielordners. Defaults to None.
@@ -710,7 +713,7 @@ class Datenlogger:
         self._log_file_path = log_file_path
 
     def start(self):
-        """Funktion startet den Datenlogger"""
+        """Funktion startet den Datenlogger."""
 
         self._logger_running = True
         self._start_timestamp = time.time()
@@ -724,7 +727,7 @@ class Datenlogger:
             self._log_data.append([ts] + data)
 
     def save(self):
-        """Funktion speichert die uebergebenen Daten"""
+        """Funktion speichert die uebergebenen Daten."""
 
         if self._logger_running and (len(self._log_data) > 0):
             self._logger_running = False
@@ -758,7 +761,7 @@ class Datenlogger:
 )
 def main(modus):
     """
-    Main-Programm: Manuelles Ansteuern der implementierten Fahrparcours 1-7
+    Main-Programm: Manuelles Ansteuern der implementierten Fahrparcours 1-7 sowie Kalibrierung und Ausgabe der IR-Sensoren.
 
     Args[Klassen]:
                     PiCar.BaseCar()
@@ -766,6 +769,8 @@ def main(modus):
                     PiCar.SensorCar()
     Funktionen der Klassen:
                     fp1() - fp7()
+                    calibrate_ir_sensors()
+                    print_ir_values()
     Args[Fahrparcour]:
                     v (int): Geschwindigkeit. Default 50
     """
@@ -782,17 +787,18 @@ def main(modus):
         7: "Fahrparcour 7",
         9: "Ausgabe IR-Werte",
     }
-    warnung = "ACHTUNG! Das Auto wird ein Stück fahren!\n Dücken Sie ENTER zum Start."
+    str_warnung = "ACHTUNG! Das Auto wird ein Stück fahren!\n Druecken Sie ENTER zum Start."
+    str_abbruch = "Abbruch!"
 
     if modus == None:
-        print("--" * 20)
+        print("--" * 23)
         print("Auswahl:")
         for m in modi.keys():
             print("{i} - {name}".format(i=m, name=modi[m]))
-        print("--" * 20)
+        print("--" * 23)
 
     while modus == None:
-        modus = input("Wähle  (Andere Taste für Abbruch): ? ")
+        modus = input("Wähle Ziffer! (Andere Taste für Abbruch): ? ")
         if modus in ["0", "1", "2", "3", "4", "5", "6", "7", "9"]:
             break
         else:
@@ -806,53 +812,32 @@ def main(modus):
         SensorCar().calibrate_ir_sensors()
 
     if modus == 1:
-        x = input(warnung)
-        if x == "":
-            SensorCar().fp1()
-        else:
-            print("Abbruch")
+        x = input(str_warnung)
+        SensorCar().fp1() if x == "" else print(str_abbruch)
 
     if modus == 2:
-        x = input(warnung)
-        if x == "":
-            SensorCar().fp2()
-        else:
-            print("Abbruch")
+        x = input(str_warnung)
+        SensorCar().fp2() if x == "" else print(str_abbruch)
 
     if modus == 3:
-        x = input(warnung)
-        if x == "":
-            SensorCar().fp3()
-        else:
-            print("Abbruch")
+        x = input(str_warnung)
+        SensorCar().fp3() if x == "" else print(str_abbruch)
 
     if modus == 4:
-        x = input(warnung)
-        if x == "":
-            SensorCar().fp4()
-        else:
-            print("Abbruch")
+        x = input(str_warnung)
+        SensorCar().fp4() if x == "" else print(str_abbruch)
 
     if modus == 5:
-        x = input(warnung)
-        if x == "":
-            SensorCar().fp5()
-        else:
-            print("Abbruch")
+        x = input(str_warnung)
+        SensorCar().fp5() if x == "" else print(str_abbruch)
 
     if modus == 6:
-        x = input(warnung)
-        if x == "":
-            SensorCar().fp6()
-        else:
-            print("Abbruch")
+        x = input(str_warnung)
+        SensorCar().fp6() if x == "" else print(str_abbruch)
 
     if modus == 7:
-        x = input(warnung)
-        if x == "":
-            SensorCar().fp7()
-        else:
-            print("Abbruch")
+        x = input(str_warnung)
+        SensorCar().fp7() if x == "" else print(str_abbruch)
 
     if modus == 9:
         SensorCar().print_ir_values()

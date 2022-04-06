@@ -11,7 +11,7 @@ import socket
 
 
 df = None
-car = PiCar.SensorCar(filter_deepth=2)
+car = PiCar.SensorCar(filter_depth=2)
 
 
 def get_ip_address():
