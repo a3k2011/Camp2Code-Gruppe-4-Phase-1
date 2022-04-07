@@ -532,7 +532,7 @@ class SensorCar(Sonic):
         ir_result = self.get_ir_result()
 
         sa_lookup = self.SA_FROM_IR_RESULT.get(ir_result) if self.SA_FROM_IR_RESULT.get(ir_result) is not None else self.IR_INVALID
-        sa_soll = sa_lookup if sa_lookup < self.IR_NO_LINE else self._tmp_sa[1]
+        sa_soll = sa_lookup if sa_lookup < self.IR_NO_LINE else self._tmp_sa[-1]
 
         self._tmp_sa.popleft()
         self._tmp_sa.append(sa_soll)
@@ -581,7 +581,7 @@ class SensorCar(Sonic):
                 elif sa_lookup == self.IR_NO_LINE:
                     self._line = False
                     self.drive(self._tmp_speed, -1)
-                    self.steering_angle = self._tmp_sa[1] * -1
+                    self.steering_angle = self._tmp_sa[-1] * -1
                 else:
                     print("Invalid IR-Result")
 
@@ -594,7 +594,7 @@ class SensorCar(Sonic):
                     self._line = True
                     self.drive(self._tmp_speed, 1)
                     break
-                if not self._line and abs(self._tmp_sa[1]) < 20:  
+                if not self._line and abs(self._tmp_sa[-1]) < 20:  
                     self._active = False
                     break
 
@@ -623,7 +623,7 @@ class SensorCar(Sonic):
                     elif sa_lookup == self.IR_NO_LINE:
                         self._line = False
                         self.drive(self._tmp_speed, -1)
-                        self.steering_angle = self._tmp_sa[1] * -1
+                        self.steering_angle = self._tmp_sa[-1] * -1
                     else:
                         print("Invalid IR-Result")
                         
@@ -635,7 +635,7 @@ class SensorCar(Sonic):
                         self._line = True
                         self.drive(self._tmp_speed, 1)
                         break
-                    if not self._line and abs(self._tmp_sa[1]) < 20:
+                    if not self._line and abs(self._tmp_sa[-1]) < 20:
                         self._active = False
                         break
 
