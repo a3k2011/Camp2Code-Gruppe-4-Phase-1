@@ -580,8 +580,12 @@ class SensorCar(Sonic):
                     self.steering_angle = sa_mean
                 elif sa_lookup == self.IR_NO_LINE:
                     self._line = False
-                    self.drive(self._tmp_speed, -1)
-                    self.steering_angle = self._tmp_sa[-1] * -1
+                    if abs(self._tmp_sa[-1]) < 20:
+                        self._active = False
+                        break
+                    else:
+                        self.drive(self._tmp_speed, -1)
+                        self.steering_angle = self._tmp_sa[-1] * -1
                 else:
                     print("Invalid IR-Result")
 
@@ -593,9 +597,6 @@ class SensorCar(Sonic):
                 if sa_lookup < self.IR_NO_LINE:
                     self._line = True
                     self.drive(self._tmp_speed, 1)
-                    break
-                if not self._line and abs(self._tmp_sa[-1]) < 20:  
-                    self._active = False
                     break
 
                 time.sleep(self.IF_FREQ)
@@ -622,8 +623,11 @@ class SensorCar(Sonic):
                         self.steering_angle = sa_mean
                     elif sa_lookup == self.IR_NO_LINE:
                         self._line = False
-                        self.drive(self._tmp_speed, -1)
-                        self.steering_angle = self._tmp_sa[-1] * -1
+                        if abs(self._tmp_sa[-1]) < 20:
+                            self._active = False
+                        else:
+                            self.drive(self._tmp_speed, -1)
+                            self.steering_angle = self._tmp_sa[-1] * -1
                     else:
                         print("Invalid IR-Result")
                         
@@ -631,12 +635,10 @@ class SensorCar(Sonic):
 
                 while self._active and not self._line and not self._hindernis:
                     sa_mean, sa_lookup = self.get_steering_angle()
+                    
                     if sa_lookup < self.IR_NO_LINE:
                         self._line = True
                         self.drive(self._tmp_speed, 1)
-                        break
-                    if not self._line and abs(self._tmp_sa[-1]) < 20:
-                        self._active = False
                         break
 
                     time.sleep(self.IF_FREQ)
