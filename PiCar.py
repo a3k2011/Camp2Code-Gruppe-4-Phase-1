@@ -1,4 +1,4 @@
-"""Import der notwendigen Bibliotheken."""
+"""Import der notwendigen Bibliotheken und Klassen."""
 import basisklassen
 import click
 import os, json, time
@@ -8,21 +8,6 @@ from collections import deque
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 
-"""Definition der verfuegbaren Fahrparcours.
-
-Args:
-        Key (int): Nummer des jeweiligen Fahrparcours.
-        Value (tupel): Nummer des jeweiligen Fahrparcours / Boolean fuer Multi-Threading Worker
-"""
-
-dictFahrparcour = {1: (1, False),
-                    2: (2, False),
-                    3: (3, False),
-                    4: (4, True),
-                    5: (5, True),
-                    6: (6, True),
-                    7: (7, True),
-                }
 
 
 class BaseCar:
@@ -89,14 +74,10 @@ class BaseCar:
         self._worker = ThreadPoolExecutor(max_workers=5)
         self._worker.submit(self.dlWorker)
 
-    def endDriveMode(self, waitingWorker=False):
+    def endDriveMode(self):
         """Funktion zum Beenden des Fahr-Modus mit Multi-Threading"""
 
-        if waitingWorker:
-            self._worker.shutdown(wait=True)
-        else:
-            self._worker.shutdown(wait=False)
-        self._active = False
+        self._worker.shutdown(wait=True)
         self.steering_angle = 0
         self.stop()
 
@@ -209,9 +190,14 @@ class BaseCar:
         self.bw.stop()
 
     def generischerFahrparcour(self, fp, v=50):
-        """Funktion fuer den generischen Fahrparcour des PiCars."""
+        """Funktion fuer den generischen Fahrparcour des PiCars.
+        
+        Args:
+            [tupel]: validFP
+        """
+        validFP = (1, 2, 3, 4, 5, 6, 7)
 
-        if fp in dictFahrparcour:
+        if fp in validFP:
             print(f"Fahrparcour {fp} gestartet.")
 
             # Starte Drive Mode
@@ -234,50 +220,57 @@ class BaseCar:
                 self.fp7(v)
 
             # Ende Drive Mode
-            self.endDriveMode(waitingWorker=dictFahrparcour.get(fp)[1])
+            self.endDriveMode()
 
             print(f"Fahrparcour {fp} beendet.")
         else:
             print("Es wurde kein gueltiger Fahrparcour ausgewaehlt!")
 
     def fp1(self, v=50):
-        """Funktion für den Fahrparcour 1"""
-
-        # Vorwaerts 3sec
+        """Funktion für den Fahrparcour 1
+        
+        Beschreibung:
+            3 Sekunden Vorwaerts / 1 Sekunde Stillstand / 3 Sekunden Rueckwaerts
+        """
         self.drive(v, 1)
         time.sleep(3)
 
-        # Stillstand 1sec
         self.stop()
         time.sleep(1)
 
-        # Rueckwaerts 3sec
         self.drive(v, -1)
         time.sleep(3)
 
-    def fp2(self, v=50):
-        """Funktion für den Fahrparcour 2"""
+        # Drive-Mode Ende setzen
+        self._active = False
 
+    def fp2(self, v=50):
+        """Funktion für den Fahrparcour 2
+        
+        Beschreibung:
+            1 Sekunde Vorwaerts / 8 Sekunden Vorwaerts mit max. neg. Lenkwinkel 
+            / 8 Sekunden Rueckwaerts mit max. neg. Lenkwinkel / 1 Sekunde Rueckwarts
+
+            Identische Fahrparcour nochmals mit max. pos. Lenkwinkel.
+        """
         for sa in [(-self.SA_MAX + 5), (self.SA_MAX - 5)]:
-            # Vorwaerts 1sec gerade
             self.steering_angle = 0
             self.drive(v, 1)
             time.sleep(1)
 
-            # Vorwaerts 8sec Max Lenkwinkel
             self.steering_angle = sa
             time.sleep(8)
 
-            # Stoppen
             self.stop()
 
-            # Rueckwaerts 8sec Max Lenkwinkel
             self.drive(v, -1)
             time.sleep(8)
 
-            # Rueckwaerts 1sec gerade
             self.steering_angle = 0
             time.sleep(1)
+
+        # Drive-Mode Ende setzen
+        self._active = False
 
 
 
@@ -335,7 +328,7 @@ class Sonic(BaseCar):
                 self._worker.submit(self.inputWorker)
         """
         while self._active:
-            inpUser = input("Bitte den Befehl eingeben: ")
+            inpUser = input("Bitte einen Fahrbefehl eingeben: ")
             dictBefehle = {
                 "f": "self.direction = 1",
                 "b": "self.direction = -1",
@@ -346,7 +339,7 @@ class Sonic(BaseCar):
                     exec(dictBefehle[inpUser])
                 elif type(int(inpUser)) and int(inpUser) >= 0 and int(inpUser) <= 100:
                     self.speed = int(inpUser)
-                    self._tmpspeed = int(inpUser)
+                    self._tmp_speed = int(inpUser)
                 else:
                     raise Exception
             except Exception:
@@ -354,7 +347,13 @@ class Sonic(BaseCar):
                 continue
 
     def rangierenWorker(self):
-        """Funktion fuehrt die Rangier-Funktionalitaeten fuer Fahrparcour 4 aus."""
+        """Funktion fuehrt die Rangier-Funktionalitaeten fuer Fahrparcour 4 aus.
+        
+        Beschreibung:
+            Wenn Hindernis erkannt wird, max. neg. Lenkwinkel
+            und Rueckwarts Fahrt mit v=50 fuer 2.55 Sekunden.
+            Danach geradeaus mit vorheriger Geschwindigkeit.
+        """
 
         while self._active:
             if self._hindernis:
@@ -391,7 +390,11 @@ class Sonic(BaseCar):
         return [self.speed, self.direction, self.steering_angle, self._distance]
 
     def fp3(self, v=50):
-        """Funktion für den Fahrparcour 3"""
+        """Funktion für den Fahrparcour 3
+        
+        Beschreibung:
+            Vorwaerts Fahrt bis ein Hindernis mit dem US-Sensor erkannt wird.
+        """
 
         # Starte die Fahrt
         self.drive(v, 1)
@@ -399,11 +402,19 @@ class Sonic(BaseCar):
         while self._active and not self._hindernis:
             time.sleep(0.1)
 
+        # Drive-Mode Ende setzen
+        self._active = False
+
     def fp4(self, v=50):
-        """Funktion für den Fahrparcour 4"""
+        """Funktion für den Fahrparcour 4
+        
+        Beschreibung:
+            Vorwarts Fahrt bis ein Hindernis mit dem US-Sensor erkannt wird.
+            Dann Reaktion mit der Rangieren-Funktion.
+        """
 
         self._worker.submit(self.rangierenWorker)
-        # self._worker.submit(self.inputWorker)
+        self._worker.submit(self.inputWorker)
 
         # Starte die Fahrt
         self.drive(v, 1)
@@ -533,9 +544,12 @@ class SensorCar(Sonic):
         return np.mean(self._tmp_sa), sa_lookup
 
     def fp5(self, v=50):
-        """Funktion für den Fahrparcour 5"""
+        """Funktion für den Fahrparcour 5
         
-        # Starte die Fahrt
+        Beschreibung:
+            Vorwaerts Fahrt mit Linienverfolgung bis die Linie nicht mehr erkannt wird.
+        """
+        
         self.drive(v, 1)
 
         while self._active:
@@ -553,9 +567,15 @@ class SensorCar(Sonic):
             time.sleep(self.IF_FREQ)
 
     def fp6(self, v=50):
-        """Funktion für den Fahrparcour 6"""
+        """Funktion für den Fahrparcour 6
         
-        # Starte die Fahrt
+        Beschreibung:
+            Vorwaerts Fahrt mit Linienverfolgung bis die Linie nicht mehr erkannt wird.
+            Wenn Linie nicht mehr erkannt wird, entweder Rueckwaerts Fahrt mit gegensaetlichem 
+            Lenkwinkel bis die Linie wieder erkannt wird oder Abbruch, wenn Lenkwinkel < 20 bei
+            Verlust der Linie war.
+        """
+
         self.drive(v, 1)
 
         while self._active:
@@ -589,9 +609,17 @@ class SensorCar(Sonic):
                 time.sleep(self.IF_FREQ)
 
     def fp7(self, v=50):
-        """Funktion für den Fahrparcour 7"""
+        """Funktion für den Fahrparcour 7
+        
+        Beschreibung:
+            Vorwaerts Fahrt mit Linienverfolgung bis die Linie nicht mehr erkannt wird.
+            Wenn Linie nicht mehr erkannt wird, entweder Rueckwaerts Fahrt mit gegensaetlichem 
+            Lenkwinkel bis die Linie wieder erkannt wird oder Abbruch, wenn Lenkwinkel < 20 bei
+            Verlust der Linie war.
+            Bei Erkennung eines Hindernisses wird gestoppt. Wenn Hindernis laenger als 5 Sekunden
+            erkannt wird, wird die Fahrt beendet.
+        """
 
-        # Starte die Fahrt
         self.drive(v, 1)
         
         while self._active:
