@@ -227,7 +227,7 @@ class BaseCar:
             print("Es wurde kein gueltiger Fahrparcour ausgewaehlt!")
 
     def fp1(self, v=50):
-        """Funktion für den Fahrparcour 1
+        """Funktion für den Fahrparcour 1.
         
         Beschreibung:
             3 Sekunden Vorwaerts / 1 Sekunde Stillstand / 3 Sekunden Rueckwaerts
@@ -245,7 +245,7 @@ class BaseCar:
         self._active = False
 
     def fp2(self, v=50):
-        """Funktion für den Fahrparcour 2
+        """Funktion für den Fahrparcour 2.
         
         Beschreibung:
             1 Sekunde Vorwaerts / 8 Sekunden Vorwaerts mit max. neg. Lenkwinkel 
@@ -390,13 +390,11 @@ class Sonic(BaseCar):
         return [self.speed, self.direction, self.steering_angle, self._distance]
 
     def fp3(self, v=50):
-        """Funktion für den Fahrparcour 3
+        """Funktion für den Fahrparcour 3.
         
         Beschreibung:
             Vorwaerts Fahrt bis ein Hindernis mit dem US-Sensor erkannt wird.
         """
-
-        # Starte die Fahrt
         self.drive(v, 1)
 
         while self._active and not self._hindernis:
@@ -406,17 +404,15 @@ class Sonic(BaseCar):
         self._active = False
 
     def fp4(self, v=50):
-        """Funktion für den Fahrparcour 4
+        """Funktion für den Fahrparcour 4.
         
         Beschreibung:
             Vorwarts Fahrt bis ein Hindernis mit dem US-Sensor erkannt wird.
             Dann Reaktion mit der Rangieren-Funktion.
         """
-
         self._worker.submit(self.rangierenWorker)
         self._worker.submit(self.inputWorker)
 
-        # Starte die Fahrt
         self.drive(v, 1)
 
 
@@ -515,8 +511,9 @@ class SensorCar(Sonic):
 
     def get_ir_result(self):
         """Ausgabe des IR-Results (Key-Value) fuer Uebersetzungstabelle
+
         Returns:
-        [int]: IR-Key für Uebersetzungstabelle.
+            [int]: IR-Key für Uebersetzungstabelle.
         """
         ir_data = np.array(self.ir_sensor_analog)
         thresVal = self.IR_FAKTOR * ir_data.max()
@@ -525,12 +522,12 @@ class SensorCar(Sonic):
         ir_result = (self._ir_matrix * ir_digital).sum()
 
         return ir_result
-        
+
     def get_steering_angle(self):
         """Ausgabe des Lenkwinkels fuer das PiCar (Mean)
         
         Returns:
-        [float]: Mittleren Lenkwinkel.
+            [float]: Mittleren Lenkwinkel.
         """
         ir_result = self.get_ir_result()
 
@@ -543,7 +540,7 @@ class SensorCar(Sonic):
         return np.mean(self._tmp_sa), sa_lookup
 
     def fp5(self, v=50):
-        """Funktion für den Fahrparcour 5
+        """Funktion für den Fahrparcour 5.
         
         Beschreibung:
             Vorwaerts Fahrt mit Linienverfolgung bis die Linie nicht mehr erkannt wird.
@@ -564,7 +561,7 @@ class SensorCar(Sonic):
             time.sleep(self.IF_FREQ)
 
     def fp6(self, v=50):
-        """Funktion für den Fahrparcour 6
+        """Funktion für den Fahrparcour 6.
         
         Beschreibung:
             Vorwaerts Fahrt mit Linienverfolgung bis die Linie nicht mehr erkannt wird.
@@ -604,7 +601,7 @@ class SensorCar(Sonic):
                 time.sleep(self.IF_FREQ)
 
     def fp7(self, v=50):
-        """Funktion für den Fahrparcour 7
+        """Funktion für den Fahrparcour 7.
         
         Beschreibung:
             Vorwaerts Fahrt mit Linienverfolgung bis die Linie nicht mehr erkannt wird.
