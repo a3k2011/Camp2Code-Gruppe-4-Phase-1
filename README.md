@@ -34,7 +34,7 @@ Ignoriert im Arbeitsverzeichnis die folgenden Dateien bzw. Ordner:
 
 ## SD-Karte klonen / Backup
 Tool: Win32 Disk Imager
-1. Backup erstellen, indem *img-Datei von altem Datenträger erstellt wird.
-2. Backup lesen, indem *img-Datei auf neuen Datenträger geschrieben wird
+1. Backup erstellen, indem *.img-Datei von altem Datenträger erstellt wird.
+2. Backup lesen, indem *.img-Datei auf neuen Datenträger geschrieben wird
 3. Partition auf Raspberry Pi erweitern, mit folgendem Befehl:
 * sudo raspi-config --expand-rootfs
