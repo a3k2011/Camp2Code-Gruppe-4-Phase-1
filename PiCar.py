@@ -433,7 +433,7 @@ class SensorCar(Sonic):
     """
 
     IF_FREQ = 0.05
-    IR_FAKTOR = 0.85
+    IR_FAKTOR = 0.75
     IR_NO_LINE = 100
     IR_INVALID = 101
     SA_FROM_IR_RESULT = {
@@ -515,7 +515,6 @@ class SensorCar(Sonic):
 
     def get_ir_result(self):
         """Ausgabe des IR-Results (Key-Value) fuer Uebersetzungstabelle
-
         Returns:
         [int]: IR-Key für Uebersetzungstabelle.
         """
@@ -526,7 +525,7 @@ class SensorCar(Sonic):
         ir_result = (self._ir_matrix * ir_digital).sum()
 
         return ir_result
-
+        
     def get_steering_angle(self):
         """Ausgabe des Lenkwinkels fuer das PiCar (Mean)
         
@@ -549,7 +548,6 @@ class SensorCar(Sonic):
         Beschreibung:
             Vorwaerts Fahrt mit Linienverfolgung bis die Linie nicht mehr erkannt wird.
         """
-        
         self.drive(v, 1)
 
         while self._active:
@@ -561,8 +559,7 @@ class SensorCar(Sonic):
             elif sa_lookup == self.IR_NO_LINE:
                 self._active = False
             else:
-                pass
-                # print("Invalid IR-Result")
+                print("Invalid IR-Result")
 
             time.sleep(self.IF_FREQ)
 
@@ -575,7 +572,6 @@ class SensorCar(Sonic):
             Lenkwinkel bis die Linie wieder erkannt wird oder Abbruch, wenn Lenkwinkel < 20 bei
             Verlust der Linie war.
         """
-
         self.drive(v, 1)
 
         while self._active:
@@ -590,8 +586,7 @@ class SensorCar(Sonic):
                     self.drive(self._tmp_speed, -1)
                     self.steering_angle = self._tmp_sa[1] * -1
                 else:
-                    pass
-                    # print("Invalid IR-Result")
+                    print("Invalid IR-Result")
 
                 time.sleep(self.IF_FREQ)
 
@@ -619,7 +614,6 @@ class SensorCar(Sonic):
             Bei Erkennung eines Hindernisses wird gestoppt. Wenn Hindernis laenger als 5 Sekunden
             erkannt wird, wird die Fahrt beendet.
         """
-
         self.drive(v, 1)
         
         while self._active:
@@ -634,8 +628,7 @@ class SensorCar(Sonic):
                         self.drive(self._tmp_speed, -1)
                         self.steering_angle = self._tmp_sa[1] * -1
                     else:
-                        pass
-                        # print("Invalid IR-Result")
+                        print("Invalid IR-Result")
                         
                     time.sleep(self.IF_FREQ)
 
