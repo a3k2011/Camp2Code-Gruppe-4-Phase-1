@@ -20,8 +20,12 @@ Das hier bereitgestellte Programm zum PiCar verfügt über die folgenden Funktio
 * Manuelle Steuerung des PiCars über das Plotly-Dashboard im Webbrowser
 
 ## Installation notwendiger Software auf dem RP4
+#### OS
+Raspberry Pi Desktop
+* Debian Buster with Raspberry Pi Desktop
+* https://downloads.raspberrypi.org/rpd_x86/images/
 #### Einstellungen
-Einstellungen -> Raspberry-Pi-Konfiguration --> Schnittstellen
+Einstellungen -> Raspberry-Pi-Konfiguration -> Schnittstellen
 * Kamera
 * SSH
 * VNC
