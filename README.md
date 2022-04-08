@@ -44,6 +44,31 @@ VNC auf dem Raspberry Pi 4 aktivieren. Session: "Xorg"
 * sudo apt-get install xrdp
 * sudo systemctl status xrdp
 
+## Fahrparcours
+#### FP1 - Vorwärts und Rückwärts
+Das Auto fährt mit langsamer Geschwindigkeit 3 Sekunden geradeaus, stoppt für 1 Sekunde und fährt 3 Sekunden rückwärts.
+#### FP2 - Kreisfahrt mit maximalem Lenkwinkel
+Das Auto fährt 1 Sekunde geradeaus, dann für 8 Sekunden mit maximalem Lenkwinkel im Uhrzeigersinn und stoppt.
+Dann soll das Auto diesen Fahrplan in umgekehrter Weise abfahren und an den Ausgangspunkt zurückkehren.
+Die Vorgehensweise soll für eine Fahrt im entgegengesetzen Uhrzeigersinn wiederholt werden.
+#### FP3 - Vorwärtsfahrt bis Hindernis
+Fahren bis ein Hindernis im Weg ist und dann stoppen. Während dieser Fahrt sollen die Fahrdaten 
+(Geschwindigkeit, Lenkwinkel, Fahrtrichtung, Sensordaten) aufgezeichnet werden.
+#### FP4 - Erkundungstour
+Das Auto soll geradeaus fahren und im Falle eines Hindernisses die Fahrtrichtung ändern und die Fahrt fortsetzen.
+Zur Änderung der Fahrrichtung soll ein maximaler Lenkwinkel eingeschlagen und rückwärts gefahren werden. Optional
+können sowohl die Geschwindigkeit als auch die Fahrtrichtung bei freier Fahrt variiert werden. Zusätzlich sollen die 
+Fahrdaten aufgezeichnet werden.
+#### FP5 - Linienverfolgung
+Folgen einer etwa 1,5 - 2 cm breiten Linie auf dem Boden. Das Auto soll stoppen, sobald das Auto das Ende der Linie erreicht hat.
+Als Test soll eine Linie genutzt werden, die sowohl eine Rechts- als auch eine Linkskurve macht. Die Kurvenradien sollen deutlich 
+größer sein als der maximale Radius, den das Auto ohne ausgleichende Fahrmanöver fahren kann.
+#### FP6 - Erweiterte Linienverfolgung
+Folgen einer Linie, die sowohl eine Rechts- als auch eine Linkskurve macht mit Kurvenradien kleiner als der maximale Lenkwinkel.
+#### FP7 - Erweiterte Linienverfolgung mit Hindernisserkennung
+Kombination von Linienverfolgung per Infrarot-Sensor und Hinderniserkennung per Ultraschall-Sensor.
+Das Auto soll einer Linie folgen bis ein Hindernis erkannt wird und dann anhalten.
+
 ## GIT-Wiki:
 #### Klonen eines vorhandenen Repositorys
 * git clone git@github.com:a3k2011/Camp2Code-Gruppe-4-Phase-1.git
